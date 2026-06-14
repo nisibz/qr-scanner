@@ -204,14 +204,17 @@ input[type="file"] { display: none; }
     grid-template-areas:
       "scanner header"
       "scanner result";
-    align-content: center;
+    /* No align-content: center — body's align-items:center centers .app, and the
+       fixed-height camera column pins the grid height so the header won't jump
+       when #result toggles. */
     gap: 24px 32px;
     padding: 32px clamp(24px, 5vw, 64px);
     width: 100%;
   }
 
-  /* Place semantic blocks into grid areas. */
-  .app__header { grid-area: header; align-self: end; }
+  /* Place semantic blocks into grid areas. Header anchors to the top of its row
+     so its position is independent of the result row below. */
+  .app__header { grid-area: header; align-self: start; }
   .scanner { grid-area: scanner; }
   .result { grid-area: result; align-self: start; }
 
