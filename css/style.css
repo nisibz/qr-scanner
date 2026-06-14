@@ -37,7 +37,7 @@ body {
   width: 100%;
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 20px 18px 32px;
+  padding: 20px clamp(16px, 4vw, 32px) 32px;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -178,3 +178,56 @@ body {
 
 /* Hide default file input visuals */
 input[type="file"] { display: none; }
+
+/* ───────────────────────── Responsive ───────────────────────── */
+
+/* Tablet (portrait, 600–899px): wider single column, slightly larger chrome. */
+@media (min-width: 600px) {
+  .app {
+    --maxw: 640px;
+    gap: 22px;
+    padding-top: 28px;
+  }
+  .app__header h1 { font-size: 1.75rem; }
+  .app__subtitle { font-size: 1rem; }
+  .btn { font-size: 1rem; padding: 14px 18px; }
+}
+
+/* Desktop (≥900px): side-by-side — camera viewport left, header + result right. */
+@media (min-width: 900px) {
+  body { align-items: center; }
+
+  .app {
+    --maxw: 960px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+    grid-template-areas:
+      "scanner header"
+      "scanner result";
+    align-content: center;
+    gap: 24px 32px;
+    padding: 32px clamp(24px, 5vw, 64px);
+    width: 100%;
+  }
+
+  /* Place semantic blocks into grid areas. */
+  .app__header { grid-area: header; align-self: end; }
+  .scanner { grid-area: scanner; }
+  .result { grid-area: result; align-self: start; }
+
+  /* Viewport fills available height instead of a fixed square. */
+  .scanner__viewport {
+    aspect-ratio: auto;
+    height: clamp(360px, 70dvh, 640px);
+  }
+
+  .app__header h1 { font-size: 2rem; }
+
+  /* On desktop, controls/file-picker sit under the camera (still in the scanner column). */
+  .btn { font-size: 1.02rem; }
+}
+
+/* Very large desktop (≥1280px): cap total width so it doesn't sprawl. */
+@media (min-width: 1280px) {
+  .app { --maxw: 1120px; }
+}
