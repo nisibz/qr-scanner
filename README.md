@@ -40,7 +40,13 @@ npx wrangler pages deploy .
 
 On the first run, Wrangler will prompt for a project name and create it. Subsequent deploys push straight to production over HTTPS.
 
-**Alternative — Git integration:** push this folder to a GitHub/GitLab repo, then in the Cloudflare dashboard → Pages → *Create project* → *Connect to Git*. Build command: *(none)*. Output directory: `/` (root).
+**Git integration (CI deploys):** connect this repo in the Cloudflare dashboard → Workers & Pages → *Create* → *Pages* → *Connect to Git*. This is a **pure static site with no build step**, so set:
+- **Framework preset:** *None*
+- **Build command:** *(leave empty)*
+- **Build output directory:** `/` (the repo root — all static files live here)
+- **Root directory:** `/`
+
+Do **not** put `npx wrangler deploy` as the build command — Cloudflare Pages uploads the output directory automatically; a manual deploy command conflicts with that and fails. Pushing to your production branch then redeploys on every commit.
 
 ## Project layout
 ```
