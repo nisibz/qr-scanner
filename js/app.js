@@ -9,8 +9,7 @@ const $ = (id) => document.getElementById(id);
 const video = $('video');
 const overlay = $('overlay');
 const status = $('status');
-const startBtn = $('startBtn');
-const stopBtn = $('stopBtn');
+const retryBtn = $('retryBtn');
 const fileInput = $('fileInput');
 const result = $('result');
 const resultText = $('resultText');
@@ -50,14 +49,21 @@ function onDecoded(text) {
 
 async function startCamera() {
   clearResult();
-  startBtn.disabled = true;
+  retryBtn.hidden = true;
   setStatus('Starting camera…');
+
+  // Camera APIs require a secure context (localhost or HTTPS).
+  if (!window.isSecureContext) {
+    setStatus('Camera needs a secure context (localhost or HTTPS). Open the deployed URL or scan an image instead.');
+    retryBtn.hidden = false;
+    return;
+  }
 
   try {
     const hasCamera = await QrScanner.hasCamera();
     if (!hasCamera) {
-      setStatus('No camera found on this device.');
-      startBtn.disabled = false;
+      setStatus('No camera found on this device. Scan an image instead.');
+      retryBtn.hidden = false;
       return;
     }
 
@@ -77,22 +83,11 @@ async function startCamera() {
 
     await scanner.start();
     overlay.hidden = false;
-    startBtn.hidden = true;
-    stopBtn.hidden = false;
     setStatus('Point at a QR code');
   } catch (err) {
     handleCameraError(err);
-    startBtn.disabled = false;
+    retryBtn.hidden = false;
   }
-}
-
-function stopCamera() {
-  if (scanner) scanner.stop();
-  overlay.hidden = true;
-  startBtn.hidden = false;
-  stopBtn.hidden = true;
-  startBtn.disabled = false;
-  setStatus('');
 }
 
 function handleCameraError(err) {
@@ -128,8 +123,7 @@ async function onFilePicked(file) {
 }
 
 // Wire up events
-startBtn.addEventListener('click', startCamera);
-stopBtn.addEventListener('click', stopCamera);
+retryBtn.addEventListener('click', startCamera);
 fileInput.addEventListener('change', (e) => onFilePicked(e.target.files && e.target.files[0]));
 clearBtn.addEventListener('click', clearResult);
 
@@ -148,3 +142,6 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => { /* offline support non-critical */ });
   });
 }
+
+// Auto-start the camera when the app opens (module scripts run after DOM parse).
+startCamera();
