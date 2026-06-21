@@ -49,6 +49,13 @@ const historyEmpty = $('historyEmpty');
 const historyExport = $('historyExport');
 const historyClear = $('historyClear');
 
+// Install prompt elements
+const installPrompt = $('installPrompt');
+const installBtn = $('installBtn');
+const installDismiss = $('installDismiss');
+const installHint = $('installHint');
+const installIos = $('installIos');
+
 // In-memory batch collection (not persisted).
 const batchItems = [];
 let batchSeen = new Set();
@@ -622,6 +629,109 @@ if ('serviceWorker' in navigator) {
       /* offline support non-critical */
     });
   });
+}
+
+// ────────────────────────────── Install prompt ──────────────────────────────
+// Show a custom install banner on first visit. Captures beforeinstallprompt
+// (Chromium/Android) and falls back to "Add to Home Screen" instructions on iOS
+// Safari, which never fires the event. Permanently dismissible via localStorage.
+
+const INSTALL_DISMISS_KEY = 'qr.install.dismissed';
+
+function isStandalone() {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    // iOS Safari exposes a non-standard flag.
+    window.navigator.standalone === true
+  );
+}
+
+function isIOSSafari() {
+  const ua = navigator.userAgent || '';
+  const isIOS = /iphone|ipad|ipod/i.test(ua);
+  // Exclude Chrome/Firefox on iOS (they're WebKit but don't support Add to Home
+  // Screen the same way; they also don't fire beforeinstallprompt).
+  return isIOS && !/crios|fxios/i.test(ua);
+}
+
+function isInstallDismissed() {
+  try {
+    return localStorage.getItem(INSTALL_DISMISS_KEY) === '1';
+  } catch {
+    /* private mode / unavailable */
+    return false;
+  }
+}
+
+function setInstallDismissed() {
+  try {
+    localStorage.setItem(INSTALL_DISMISS_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+}
+
+function showInstall({ ios }) {
+  if (installPrompt.hidden === false) return;
+  installPrompt.classList.toggle('install--ios', ios);
+  installBtn.hidden = ios;
+  installHint.hidden = ios;
+  installIos.hidden = !ios;
+  installPrompt.hidden = false;
+}
+
+function hideInstall() {
+  installPrompt.hidden = true;
+}
+
+let deferredPrompt = null;
+const iosMode = isIOSSafari();
+
+// Don't bother wiring anything if already installed or permanently dismissed.
+if (!isStandalone() && !isInstallDismissed()) {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    // Suppress Chrome's default mini-infobar in favour of our banner.
+    e.preventDefault();
+    deferredPrompt = e;
+    showInstall({ ios: false });
+  });
+
+  installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    try {
+      const choice = await deferredPrompt.userChoice;
+      if (choice && choice.outcome === 'accepted') {
+        setInstallDismissed();
+      }
+    } catch {
+      /* user dismissed the native dialog */
+    }
+    deferredPrompt = null;
+    hideInstall();
+  });
+
+  installDismiss.addEventListener('click', () => {
+    setInstallDismissed();
+    hideInstall();
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    setInstallDismissed();
+    hideInstall();
+  });
+
+  // iOS Safari never fires beforeinstallprompt — surface manual instructions
+  // once the page is interactive.
+  if (iosMode) {
+    const showIosInstructions = () => showInstall({ ios: true });
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', showIosInstructions, { once: true });
+    } else {
+      showIosInstructions();
+    }
+  }
 }
 
 // Init: sync count badge + auto-start the camera.

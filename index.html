@@ -120,6 +120,21 @@
         <button id="batchClear" class="btn btn--ghost" type="button">Clear batch</button>
       </footer>
     </section>
+
+    <section id="installPrompt" class="install" hidden role="dialog" aria-label="Install app">
+      <div class="install__body">
+        <img class="install__icon" src="./icons/icon-192.png" alt="" width="44" height="44">
+        <div class="install__text">
+          <p class="install__title">Install QR Scanner</p>
+          <p id="installHint" class="install__hint">Works offline and opens instantly from your home screen.</p>
+          <p id="installIos" class="install__hint install__hint--ios" hidden>Tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.</p>
+        </div>
+      </div>
+      <div class="install__actions">
+        <button id="installBtn" class="btn btn--primary" type="button">Install</button>
+        <button id="installDismiss" class="btn btn--ghost" type="button">Not now</button>
+      </div>
+    </section>
   </main>
 
   <script type="module" src="./js/app.js"></script>

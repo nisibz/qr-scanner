@@ -1,5 +1,5 @@
 // Cache-first service worker for the QR Scanner app shell.
-const CACHE = 'qr-scanner-v5';
+const CACHE = 'qr-scanner-v6';
 const ASSETS = [
   './',
   './index.html',
