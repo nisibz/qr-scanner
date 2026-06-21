@@ -145,6 +145,19 @@ function makeActionElement(a) {
   return btn;
 }
 
+// Compact action set for history rows: the primary action plus a Copy
+// fallback. Reuses the parser's own Copy when present (so labels/values
+// stay tailored, e.g. "Copy number" for tel:); synthesizes a raw Copy
+// only for payloads that have none (e.g. vCard).
+function pickPrimaryActions(parsed) {
+  const all = parsed.actions || [];
+  if (!all.length) return [];
+  const primary = all.find((a) => a.primary) || all[0];
+  const copy = all.find((a) => a.kind === 'copy')
+    || { kind: 'copy', label: 'Copy', value: parsed.raw };
+  return primary === copy ? [primary] : [primary, copy];
+}
+
 async function copyText(value) {
   try {
     await navigator.clipboard.writeText(value);
@@ -217,6 +230,7 @@ function addToBatch(parsed) {
     type: parsed.type,
     label: parsed.label,
     title: parsed.title,
+    actions: parsed.actions || [],
     scannedAt: Date.now(),
   });
   updateBatchBadge();
@@ -259,6 +273,13 @@ function renderBatch() {
     body.className = 'hitem__body hitem__body--static';
     body.textContent = truncate(it.content, 160);
     li.appendChild(body);
+
+    if (it.actions && it.actions.length) {
+      const acts = document.createElement('div');
+      acts.className = 'hitem__actions';
+      for (const a of it.actions) acts.appendChild(makeActionElement(a));
+      li.appendChild(acts);
+    }
 
     const del = document.createElement('button');
     del.type = 'button';
@@ -364,6 +385,14 @@ async function renderHistory() {
     body.textContent = truncate(it.content, 120);
     body.addEventListener('click', () => viewHistoryItem(it));
     li.appendChild(body);
+
+    const histActions = pickPrimaryActions(parseResult(it.content));
+    if (histActions.length) {
+      const acts = document.createElement('div');
+      acts.className = 'hitem__actions';
+      for (const a of histActions) acts.appendChild(makeActionElement(a));
+      li.appendChild(acts);
+    }
 
     const del = document.createElement('button');
     del.type = 'button';

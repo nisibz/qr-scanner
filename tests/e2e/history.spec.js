@@ -47,6 +47,25 @@ test('history view lists saved scans with type badge and timestamp', async ({ pa
   await expect(item.locator('.hitem__time')).not.toBeEmpty();
 });
 
+test('history items show primary + Copy action buttons', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.locator('#fileInput').setInputFiles(fixture('url'));
+  await expect(page.locator('#historyCount')).toHaveText('1');
+
+  await page.locator('#historyBtn').click();
+  const actions = page.locator('#historyList .hitem').first().locator('.hitem__actions');
+
+  // URL → Open (link, primary) + Copy (button)
+  await expect(actions.locator('a.btn--primary')).toHaveText('Open');
+  await expect(actions.locator('a.btn--primary')).toHaveAttribute('href', 'https://example.com/hello');
+  await expect(actions.getByRole('button', { name: 'Copy' })).toBeVisible();
+
+  await actions.getByRole('button', { name: 'Copy' }).click();
+  await expect(page.locator('#status')).toContainText(/Copied/i);
+  const clip = await page.evaluate(() => navigator.clipboard.readText());
+  expect(clip).toBe('https://example.com/hello');
+});
+
 test('search filters the history list', async ({ page }) => {
   await page.locator('#fileInput').setInputFiles(fixture('url'));
   await page.locator('#fileInput').setInputFiles(fixture('plain'));
