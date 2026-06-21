@@ -19,6 +19,16 @@ test('app shell renders', async ({ page }) => {
   await expect(page.locator('#fileInput')).toBeAttached();
 });
 
+test('device controls stay hidden when no camera is available', async ({ page }) => {
+  // CI has no camera, so torch/zoom/switch buttons should never appear.
+  await expect(page.locator('#torchBtn')).toBeHidden();
+  await expect(page.locator('#switchCamBtn')).toBeHidden();
+  await expect(page.locator('#zoomControl')).toBeHidden();
+  // With no camera, "Retry camera" is shown and batch mode is hidden.
+  await expect(page.locator('#retryBtn')).toBeVisible();
+  await expect(page.locator('#batchControls')).toBeHidden();
+});
+
 test('scans a URL QR from an image file and renders Open + Copy actions', async ({ page }) => {
   await page.locator('#fileInput').setInputFiles(fixture('url'));
 

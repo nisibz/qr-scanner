@@ -3,16 +3,20 @@ import { resolve } from 'node:path';
 
 const fixture = (name) => resolve(__dirname, '..', 'fixtures', `${name}.png`);
 
+// Batch controls are hidden whenever the "Retry camera" button is shown
+// (i.e. no working camera). CI has no camera device, so simulate one with
+// Chromium's fake media stream + auto-grant so `scanner.start()` succeeds,
+// the retry button stays hidden, and the batch controls become visible.
+test.use({
+  launchOptions: {
+    args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
+  },
+});
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#status')).not.toBeEmpty();
-});
-
-test('device controls stay hidden when no camera is available', async ({ page }) => {
-  // CI has no camera, so torch/zoom/switch buttons should never appear.
-  await expect(page.locator('#torchBtn')).toBeHidden();
-  await expect(page.locator('#switchCamBtn')).toBeHidden();
-  await expect(page.locator('#zoomControl')).toBeHidden();
+  await expect(page.locator('#retryBtn')).toBeHidden();
 });
 
 test('batch mode toggle shows the batch button and suppresses the result panel', async ({ page }) => {

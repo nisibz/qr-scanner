@@ -25,6 +25,7 @@ const zoomSlider = $('zoomSlider');
 const zoomValue = $('zoomValue');
 
 // Batch elements
+const batchControls = $('batchControls');
 const batchToggle = $('batchToggle');
 const batchViewBtn = $('batchViewBtn');
 const batchCount = $('batchCount');
@@ -473,6 +474,7 @@ const scanner = createScanner({ video, onResult: onDecoded });
 async function startCamera() {
   clearResult();
   retryBtn.hidden = true;
+  batchControls.hidden = true;
   hideDeviceControls();
   setStatus('Starting camera…');
 
@@ -484,9 +486,11 @@ async function startCamera() {
     cameraList = await scanner.listCameras();
     cameraIndex = 0;
     refreshDeviceControls();
+    batchControls.hidden = false;
   } catch (err) {
     setStatus(friendlyStatus(mapCameraError(err)));
     retryBtn.hidden = false;
+    batchControls.hidden = true;
   }
 }
 
