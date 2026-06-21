@@ -3,3 +3,8 @@ node_modules/
 .dev.vars
 .DS_Store
 *.log
+
+# Test / Lighthouse artifacts
+test-results/
+playwright-report/
+.lighthouseci/

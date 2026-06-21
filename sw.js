@@ -1,11 +1,14 @@
 // Cache-first service worker for the QR Scanner app shell.
-const CACHE = 'qr-scanner-v1';
+const CACHE = 'qr-scanner-v5';
 const ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './css/style.css',
   './js/app.js',
+  './js/lib/scanner.js',
+  './js/lib/result-parser.js',
+  './js/lib/history-store.js',
   './vendor/qr-scanner.min.js',
   './vendor/qr-scanner-worker.min.js',
   './icons/icon-192.png',
