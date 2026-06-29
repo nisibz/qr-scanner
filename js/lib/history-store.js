@@ -80,7 +80,11 @@ export async function addScan({ content, type, label }) {
   const db = await openDB();
   const t = db.transaction(STORE, 'readwrite');
   const store = t.objectStore(STORE);
-  const existing = await promisifyRequest(store.index('by_content').get(content));
+  // Compare against the NEWEST matching record. IDBIndex.get() returns the
+  // match with the smallest primary key (the oldest), which would let the
+  // dedupe window permanently expire once the first scan aged out — causing
+  // every subsequent identical scan to be stored again.
+  const existing = await findNewestByContent(store, content);
   if (existing && Date.now() - existing.createdAt < DEDUPE_WINDOW_MS) {
     await txDone(t);
     return null;
@@ -95,6 +99,20 @@ export async function addScan({ content, type, label }) {
   record.id = id;
   await txDone(t);
   return record;
+}
+
+// Returns the most recently inserted record for `content` (highest primary
+// key among matches), or null. Uses a reverse cursor since IDBIndex.get()
+// would return the oldest match instead.
+function findNewestByContent(store, content) {
+  return new Promise((resolve, reject) => {
+    const req = store.index('by_content').openCursor(IDBKeyRange.only(content), 'prev');
+    req.onsuccess = () => {
+      const cursor = req.result;
+      resolve(cursor ? cursor.value : null);
+    };
+    req.onerror = () => reject(req.error);
+  });
 }
 
 /** All scans, newest first. */

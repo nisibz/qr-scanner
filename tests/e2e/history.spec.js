@@ -107,6 +107,22 @@ test('tapping an item re-displays the result and closes history', async ({ page 
   await expect(page.locator('#resultLabel')).toHaveText(/Wi-Fi/i);
 });
 
+test('re-displaying a history item does not create a duplicate', async ({ page }) => {
+  await page.locator('#fileInput').setInputFiles(fixture('url'));
+  await expect(page.locator('#historyCount')).toHaveText('1');
+
+  await page.locator('#historyBtn').click();
+  await expect(page.locator('.hitem')).toHaveCount(1);
+
+  await page.locator('.hitem__body').first().click();
+  await expect(page.locator('#result')).toBeVisible();
+
+  // Re-opening history must still show a single entry — re-viewing must not persist again.
+  await page.locator('#historyBtn').click();
+  await expect(page.locator('.hitem')).toHaveCount(1);
+  await expect(page.locator('#historyCount')).toHaveText('1');
+});
+
 test('delete removes a single item', async ({ page }) => {
   await page.locator('#fileInput').setInputFiles(fixture('url'));
   await page.locator('#fileInput').setInputFiles(fixture('plain'));

@@ -63,6 +63,12 @@ let batchSeen = new Set();
 let cameraList = [];
 let cameraIndex = 0;
 
+// Dedupe guards for the camera scan loop. The qr-scanner library fires
+// onResult on every decoded frame (up to 10/s), so without these the same
+// code held in view floods history and fights the user's scroll.
+let lastCameraRaw = null;   // last content decoded from the camera
+let lastRenderedRaw = null; // content currently shown in the result panel
+
 function setStatus(msg) {
   status.textContent = msg || '';
 }
@@ -75,16 +81,28 @@ function clearResult() {
   resultWarning.hidden = true;
   resultWarning.textContent = '';
   resultActions.innerHTML = '';
+  // Reset so re-scanning the same code after dismissing re-renders, scrolls,
+  // and (for the camera) re-evaluates persistence from a clean slate.
+  lastCameraRaw = null;
+  lastRenderedRaw = null;
 }
 
 function renderResult(parsed) {
+  const isNew = parsed.raw !== lastRenderedRaw;
+  lastRenderedRaw = parsed.raw;
   resultLabel.textContent = parsed.label || 'Decoded';
   resultText.textContent = parsed.title || '';
   renderFields(parsed.fields || []);
   renderWarning(parsed.safety);
   renderActions(parsed.actions || []);
   result.hidden = false;
-  result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  // Only scroll into view and buzz when a genuinely new code is shown; on
+  // repeat frames of the same code this would otherwise snap the page back
+  // and vibrate up to 10 times per second.
+  if (isNew) {
+    result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (navigator.vibrate) navigator.vibrate(40);
+  }
 }
 
 function renderFields(fields) {
@@ -185,7 +203,7 @@ function downloadBlob(filename, content, mime) {
   }
 }
 
-function handleDecoded(raw) {
+function handleDecoded(raw, { source } = {}) {
   if (!raw) return;
   const parsed = parseResult(raw);
 
@@ -196,7 +214,15 @@ function handleDecoded(raw) {
 
   renderResult(parsed);
   setStatus('Scanned');
-  if (navigator.vibrate) navigator.vibrate(40);
+  // Re-displaying a saved history item should never re-persist it.
+  if (source === 'history') return;
+  // Camera scanning: one history entry per code. While the same code stays
+  // in view, every decoded frame is identical to the last, so skip writing.
+  if (source === 'camera') {
+    if (raw === lastCameraRaw) return;
+    lastCameraRaw = raw;
+  }
+  // File scans always go through; IndexedDB dedupe still applies.
   // Persist to history (no-op if disabled or deduped)
   history
     .addScan({ content: parsed.raw, type: parsed.type, label: parsed.label })
@@ -212,7 +238,7 @@ function handleDecoded(raw) {
 
 // Scanner result callback — re-render result on every successful decode.
 function onDecoded(raw) {
-  handleDecoded(raw);
+  handleDecoded(raw, { source: 'camera' });
 }
 
 // ────────────────────────────── Batch mode ──────────────────────────────
@@ -416,7 +442,7 @@ async function renderHistory() {
 
 function viewHistoryItem(item) {
   historyView.hidden = true;
-  handleDecoded(item.content);
+  handleDecoded(item.content, { source: 'history' });
 }
 
 function openHistory() {
@@ -529,7 +555,7 @@ async function onFilePicked(file) {
   setStatus('Scanning image…');
   try {
     const data = await scanner.scanFile(file);
-    onDecoded(data);
+    handleDecoded(data, { source: 'file' });
   } catch (err) {
     // qr-scanner throws NotFoundException for "no code detected", but for some
     // inputs (e.g. tiny/blank images) it throws a generic error. From the
