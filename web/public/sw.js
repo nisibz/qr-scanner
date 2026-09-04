@@ -1,6 +1,6 @@
 // Cache-first service worker for the QR Scanner app shell.
 // CACHE is rewritten at build time from package.json (see scripts/sync-version.mjs).
-const CACHE = 'qr-scanner-v2.0.0';
+const CACHE = 'qr-scanner-v2.2.0';
 const ASSETS = [
   '/',
   '/index.html',

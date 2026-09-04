@@ -6,6 +6,8 @@ export interface HistoryRecord {
   type: string;
   label: string;
   createdAt: number;
+  /** Human title captured at scan time (e.g. page <title> for URLs). */
+  title?: string;
 }
 
 export interface ParsedAction {
@@ -29,15 +31,41 @@ export interface ParsedResult {
   raw: string;
 }
 
-/** Short display name + subtitle for a history row. */
-export function rowVisuals(type: string, content: string): { icon: string; title: string; sub: string } {
+/**
+ * Short display name + subtitle for a history row.
+ * `titles` maps content → a human title (page <title>) captured at scan time;
+ * without it URLs fall back to domain + path, which is often ambiguous on
+ * re-read ("example.com/hello" — what was it?). Unknown/local URLs never fetch.
+ */
+export function rowVisuals(
+  type: string,
+  content: string,
+  titles?: Map<string, string>,
+): { icon: string; title: string; sub: string } {
   try {
     switch (type) {
       case 'url': {
         const u = new URL(content);
+        const saved = titles?.get(content);
+        if (saved) {
+          // e.g. "Example Domain — About" · example.com
+          return { icon: ICONS.url, title: truncate(saved, 48), sub: u.host.replace(/^www\./, '') };
+        }
         const path = u.pathname.replace(/\/$/, '');
-        const title = u.host.replace(/^www\./, '') + (path && path.length <= 24 ? path : '');
-        return { icon: ICONS.url, title: title || u.host, sub: 'Website' };
+        const segments = path.split('/').filter(Boolean);
+        const last = segments[segments.length - 1];
+        // Prefer the last path segment (often descriptive: /articles/qr-guide)
+        // prettified; fall back to host when the path is bare.
+        if (last) {
+          const pretty = last
+            .replace(/\.(html?|php|aspx?)$/i, '')
+            .replace(/[-_]+/g, ' ')
+            .replace(/^\w/, (c) => c.toUpperCase());
+          if (pretty.length >= 3) {
+            return { icon: ICONS.url, title: truncate(pretty, 48), sub: u.host.replace(/^www\./, '') };
+          }
+        }
+        return { icon: ICONS.url, title: u.host.replace(/^www\./, ''), sub: 'Website' };
       }
       case 'wifi': {
         const m = content.match(/S:([^;]+)/);

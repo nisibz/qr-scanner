@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useApp } from '@/state/AppContext'
 import { cn } from '@/lib/utils'
 import type { ParsedAction } from '@/lib/app'
@@ -45,12 +46,21 @@ export function ResultSheet() {
   if (!result) return null
 
   return (
-    <div
-      role="dialog"
-      aria-label="Scan result"
-      className="fixed inset-x-0 bottom-0 z-[60] mx-auto w-[calc(100%-20px)] max-w-md max-h-[72dvh] overflow-y-auto rounded-xl border bg-card p-4 shadow-[0_-8px_32px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-4 fade-in duration-200"
-      style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))' }}
-    >
+    // Portal above everything (Sheet is z-50): the card owns its own scrim so
+    // taps land here, never leak through to the History footer underneath.
+    createPortal(
+      <div className="fixed inset-0 z-[60]">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-black/40 animate-in fade-in duration-200"
+          onClick={() => actions.clearResult()}
+        />
+        <div
+          role="dialog"
+          aria-label="Scan result"
+          className="absolute inset-x-0 mx-auto w-[calc(100%-20px)] max-w-md max-h-[72dvh] overflow-y-auto rounded-xl border bg-card p-4 shadow-[0_-8px_32px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-4 fade-in duration-200"
+          style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))' }}
+        >
       <p className="text-[0.72rem] uppercase tracking-widest text-muted-foreground">{result.label || 'Decoded'}</p>
       <p className="mt-1 break-words text-base leading-relaxed">{result.title}</p>
 
@@ -82,6 +92,9 @@ export function ResultSheet() {
         Dismiss
       </Button>
       <span className="sr-only" role="status">{status}</span>
-    </div>
+        </div>
+      </div>,
+      document.body,
+    )
   )
 }

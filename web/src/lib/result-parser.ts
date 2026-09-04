@@ -4,7 +4,6 @@
 // human-readable fields to show, and a list of UI actions to offer.
 // The parser is UI-agnostic — the orchestrator decides how to render.
 
-const RE_URL = /^([a-z][a-z0-9+.\-]*:)?\/\/[^\s]+$/i;
 const RE_HTTP_URL = /^https?:\/\/[^\s]+$/i;
 const RE_MAILTO = /^mailto:/i;
 const RE_TEL = /^tel:/i;
@@ -18,34 +17,34 @@ const RE_BARE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
 const RE_BTC = /^(bitcoin|bitcoincash|bc1):/i;
 const RE_ETH = /^ethereum:0x[0-9a-f]{40}$/i;
 
-/**
- * @typedef {Object} Field
- * @property {string} label
- * @property {string} value
- * @property {boolean} [monospace]
- *
- * @typedef {Object} Action
- * @property {'link'|'copy'|'download'} kind
- * @property {string} label
- * @property {string} [href]        // for 'link'
- * @property {string} [value]       // for 'copy'
- * @property {string} [filename]    // for 'download'
- * @property {string} [content]     // for 'download'
- * @property {string} [mime]        // for 'download'
- * @property {boolean} [primary]    // visually emphasized
- *
- * @typedef {Object} ParsedResult
- * @property {string} type
- * @property {string} label         // uppercase UI badge
- * @property {string} title         // main display text
- * @property {Field[]} fields
- * @property {Action[]} actions
- * @property {{ isSafe: boolean, reasons: string[] }} [safety]   // URLs only
- * @property {string} raw           // original decoded text
- */
+export interface Field {
+  label: string;
+  value: string;
+  monospace?: boolean;
+}
 
-/** @returns {ParsedResult} */
-export function parseResult(raw) {
+export interface Action {
+  kind: 'link' | 'copy' | 'download';
+  label: string;
+  href?: string;
+  value?: string;
+  filename?: string;
+  content?: string;
+  mime?: string;
+  primary?: boolean;
+}
+
+export interface ParsedResult {
+  type: string;
+  label: string;
+  title: string;
+  fields: Field[];
+  actions: Action[];
+  safety?: { isSafe: boolean; reasons: string[] };
+  raw: string;
+}
+
+export function parseResult(raw: string): ParsedResult {
   const text = (raw || '').trim();
   if (!text) return { type: 'empty', label: '', title: '', fields: [], actions: [], raw: '' };
 
@@ -66,7 +65,7 @@ export function parseResult(raw) {
 
 // ────────────────────────────── Parsers ──────────────────────────────
 
-function parseUrl(text) {
+function parseUrl(text: string): ParsedResult {
   const safety = assessUrl(text);
   return {
     type: 'url',
@@ -82,10 +81,10 @@ function parseUrl(text) {
   };
 }
 
-function parseWifi(text) {
+function parseWifi(text: string): ParsedResult {
   const f = parseWifiPayload(text);
   const isOpen = !f.auth || f.auth.toLowerCase() === 'nopass';
-  const fields = [
+  const fields: Field[] = [
     { label: 'Network', value: f.ssid || '—' },
     { label: 'Security', value: isOpen ? 'Open' : f.auth.toUpperCase() },
   ];
@@ -94,14 +93,14 @@ function parseWifi(text) {
   }
   if (f.hidden) fields.push({ label: 'Hidden', value: 'Yes' });
 
-  const actions = [];
+  const actions: Action[] = [];
   if (f.ssid) actions.push({ kind: 'copy', label: 'Copy network name', value: f.ssid });
   if (f.password) actions.push({ kind: 'copy', label: 'Copy password', value: f.password, primary: true });
 
   return { type: 'wifi', label: 'Wi-Fi', title: f.ssid || 'Wi-Fi network', fields, actions, raw: text };
 }
 
-function parseVCard(text) {
+function parseVCard(text: string): ParsedResult {
   const f = parseVCardPayload(text);
   const fields = [];
   if (f.fn) fields.push({ label: 'Name', value: f.fn });
@@ -110,7 +109,7 @@ function parseVCard(text) {
   for (const tel of f.tels) fields.push({ label: 'Phone', value: tel, monospace: true });
   for (const email of f.emails) fields.push({ label: 'Email', value: email });
 
-  const actions = [
+  const actions: Action[] = [
     { kind: 'download', label: 'Save contact (.vcf)', filename: vcardFilename(f), content: text, mime: 'text/vcard', primary: true },
   ];
   for (const tel of f.tels) actions.push({ kind: 'link', label: `Call ${tel}`, href: `tel:${tel}` });
@@ -125,7 +124,7 @@ function parseVCard(text) {
   };
 }
 
-function parseMeCard(text) {
+function parseMeCard(text: string): ParsedResult {
   const f = parseMeCardPayload(text);
   const fields = [];
   if (f.name) fields.push({ label: 'Name', value: f.name });
@@ -147,7 +146,7 @@ function parseMeCard(text) {
   };
 }
 
-function parseVEvent(text) {
+function parseVEvent(text: string): ParsedResult {
   const f = parseVEventPayload(text);
   const fields = [];
   if (f.summary) fields.push({ label: 'Event', value: f.summary });
@@ -167,7 +166,7 @@ function parseVEvent(text) {
   };
 }
 
-function parseMailto(text) {
+function parseMailto(text: string): ParsedResult {
   let url;
   try {
     url = new URL(text);
@@ -194,7 +193,7 @@ function parseMailto(text) {
   };
 }
 
-function parseBareEmail(text) {
+function parseBareEmail(text: string): ParsedResult {
   return {
     type: 'email',
     label: 'Email',
@@ -208,7 +207,7 @@ function parseBareEmail(text) {
   };
 }
 
-function parseTel(text) {
+function parseTel(text: string): ParsedResult {
   const number = text.slice('tel:'.length).replace(/[^\d+*#\-().\s]/g, '');
   return {
     type: 'tel',
@@ -223,7 +222,7 @@ function parseTel(text) {
   };
 }
 
-function parseSms(text) {
+function parseSms(text: string): ParsedResult {
   // sms:<number>?body=...  or  smsto:<number>:<body>
   let number = '';
   let body = '';
@@ -258,7 +257,7 @@ function parseSms(text) {
   };
 }
 
-function parseGeo(text) {
+function parseGeo(text: string): ParsedResult {
   // geo:lat,lng?q=...
   const rest = text.slice('geo:'.length);
   const q = rest.split('?')[0];
@@ -280,7 +279,7 @@ function parseGeo(text) {
   };
 }
 
-function parseCrypto(text) {
+function parseCrypto(text: string): ParsedResult {
   const fields = [{ label: 'Address', value: text, monospace: true }];
   return {
     type: 'crypto',
@@ -294,7 +293,7 @@ function parseCrypto(text) {
   };
 }
 
-function parseText(text) {
+function parseText(text: string): ParsedResult {
   return {
     type: 'text',
     label: 'Text',
@@ -311,7 +310,8 @@ function parseText(text) {
  * Parse WIFI:S:<ssid>;T:<auth>;P:<password>;H:<hidden>;;
  * Respects backslash-escaping for \; \: \\ \" \,
  */
-function parseWifiPayload(text) {
+interface WifiPayload { ssid: string; auth: string; password: string; hidden: boolean }
+function parseWifiPayload(text: string): WifiPayload {
   const body = text.slice(text.indexOf(':') + 1);
   const tokens = splitEscaped(body, ';');
   const out = { ssid: '', auth: '', password: '', hidden: false };
@@ -329,10 +329,11 @@ function parseWifiPayload(text) {
   return out;
 }
 
-function parseVCardPayload(text) {
-  const out = { fn: '', org: '', title: '', tels: [], emails: [] };
-  const seenTel = new Set();
-  const seenEmail = new Set();
+interface VCardPayload { fn: string; org: string; title: string; tels: string[]; emails: string[] }
+function parseVCardPayload(text: string): VCardPayload {
+  const out: VCardPayload = { fn: '', org: '', title: '', tels: [], emails: [] };
+  const seenTel = new Set<string>();
+  const seenEmail = new Set<string>();
   for (const line of text.split(/\r?\n/)) {
     const idx = line.indexOf(':');
     if (idx === -1) continue;
@@ -353,7 +354,8 @@ function parseVCardPayload(text) {
   return out;
 }
 
-function parseMeCardPayload(text) {
+interface MeCardPayload { name: string; tel: string; email: string; note: string }
+function parseMeCardPayload(text: string): MeCardPayload {
   const body = text.slice('MECARD:'.length).replace(/;;$/, '');
   const out = { name: '', tel: '', email: '', note: '' };
   for (const tok of splitEscaped(body, ';')) {
@@ -369,7 +371,8 @@ function parseMeCardPayload(text) {
   return out;
 }
 
-function parseVEventPayload(text) {
+interface VEventPayload { summary: string; location: string; start: string; end: string }
+function parseVEventPayload(text: string): VEventPayload {
   const out = { summary: '', location: '', start: '', end: '' };
   for (const line of text.split(/\r?\n/)) {
     const idx = line.indexOf(':');
@@ -387,7 +390,7 @@ function parseVEventPayload(text) {
 // ────────────────────────────── Helpers ──────────────────────────────
 
 /** Split on `sep` while respecting backslash-escaping (\\; \\: \\. \\" \\,). */
-function splitEscaped(str, sep) {
+function splitEscaped(str: string, sep: string): string[] {
   const parts = [];
   let buf = '';
   for (let i = 0; i < str.length; i++) {
@@ -406,16 +409,16 @@ function splitEscaped(str, sep) {
 }
 
 /** Reverse the QR-style backslash escaping. */
-function unescape(s) {
-  return s.replace(/\\(.)/g, (_, c) => c);
+function unescape(s: string): string {
+  return s.replace(/\\(.)/g, (_, c: string) => c);
 }
 
-function vcardFilename(f) {
+function vcardFilename(f: VCardPayload): string {
   const base = (f.fn || f.org || 'contact').replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '').toLowerCase();
   return `${base || 'contact'}.vcf`;
 }
 
-function mecardToVCard(f) {
+function mecardToVCard(f: MeCardPayload): string {
   const [family, ...given] = (f.name || '').split(',').map((s) => s.trim());
   const lines = [
     'BEGIN:VCARD',
@@ -430,7 +433,7 @@ function mecardToVCard(f) {
   return lines.filter(Boolean).join('\r\n');
 }
 
-function formatIcsDate(value) {
+function formatIcsDate(value: string): string {
   // Handles "20240115T103000Z" and "20240115T103000" approximately.
   const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/.exec(value);
   if (!m) return value;
@@ -441,7 +444,7 @@ function formatIcsDate(value) {
  * Heuristic URL safety check. Flags things often used in phishing/scam QR codes.
  * Not a security boundary — just a nudge to look before jumping.
  */
-function assessUrl(rawUrl) {
+function assessUrl(rawUrl: string): { isSafe: boolean; reasons: string[] } {
   try {
     const u = new URL(rawUrl);
     const reasons = [];

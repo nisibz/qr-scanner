@@ -25,4 +25,5 @@ declare module '@/lib/history-store' {
   export function exportScans(): Promise<string>;
   export function exportScansCsv(): Promise<string>;
   export function importScans(json: unknown): Promise<number>;
+  export function updateTitle(content: string, title: string): Promise<boolean>;
 }

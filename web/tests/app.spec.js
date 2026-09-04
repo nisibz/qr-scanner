@@ -26,14 +26,20 @@ test('history opens with seeded rows, day headers and version in menu', async ({
   // wifi → today, url → via fixture (all today; day-header presence checked generically)
   await seedHistory(page, ['wifi', 'url', 'vcard']);
 
+  // The last scan leaves its result card open (portal scrim blocks the page)
+  // — dismiss it before opening History.
+  await page.getByRole('button', { name: 'Dismiss' }).click();
+  await page.waitForTimeout(200);
+
   await page.locator('button[aria-label="Open scan history"]').click();
 
   // Day headers render.
   await expect(page.getByText('Today', { exact: true })).toBeVisible();
 
-  // Titled rows: SSID for Wi-Fi, domain for URL, name for vCard.
+  // Titled rows: SSID for Wi-Fi; URL path segment prettified to "Hello"
+  // (domain moves to the subtitle); vCard shows the contact name.
   await expect(page.getByText('MyNetwork')).toBeVisible();
-  await expect(page.getByText('example.com/hello')).toBeVisible();
+  await expect(page.locator('.truncate', { hasText: 'Hello' })).toBeVisible();
   await expect(page.locator('.truncate', { hasText: 'Jane Doe' })).toBeVisible();
 
   // Version lives in the ⋯ menu.
@@ -63,6 +69,10 @@ test('swipe left reveals Delete; deleting asks for confirmation', async ({ page 
   await page.goto('/');
   await page.waitForTimeout(800);
   await seedHistory(page, ['url']);
+
+  // Dismiss the result card left open by the seed scan.
+  await page.getByRole('button', { name: 'Dismiss' }).click();
+  await page.waitForTimeout(200);
 
   await page.locator('button[aria-label="Open scan history"]').click();
   const row = page.locator('li .relative.z-10').first();

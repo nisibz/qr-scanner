@@ -3,6 +3,7 @@ import { createScanner, type ScannerHandle } from '@/lib/scanner'
 import { parseResult } from '@/lib/result-parser'
 import type { ParsedResult } from '@/lib/app'
 import * as historyStore from '@/lib/history-store'
+import { fetchPageTitle } from '@/lib/page-title'
 import type { HistoryRecord } from '@/lib/app'
 
 interface AppState {
@@ -112,6 +113,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (rec) void refreshHistory()
       })
       .catch(() => {})
+    // URLs: opportunistically capture the page <title> so history rows are
+    // identifiable later. Fire-and-forget — the row renders with the domain
+    // fallback until (and unless) the fetch succeeds, then we patch it.
+    if (parsed.type === 'url') {
+      fetchPageTitle(parsed.raw)
+        .then((title) => {
+          if (!title) return
+          return historyStore.updateTitle(parsed.raw, title).then((patched) => {
+            if (patched) void refreshHistory()
+          })
+        })
+        .catch(() => {})
+    }
   }, [batchMode, batch.length, refreshHistory, showResult])
 
   const deleteScan = useCallback(async (id: number) => {

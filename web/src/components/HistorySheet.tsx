@@ -49,6 +49,12 @@ export function HistorySheet({
     fetch('./manifest.webmanifest').then((r) => r.json()).then((m) => setVersion('v' + m.version)).catch(() => {})
   }, [])
 
+  // Content → saved page title (URLs fetched at scan time).
+  const titles = useMemo(
+    () => new Map(history.filter((h) => h.title).map((h) => [h.content, h.title as string])),
+    [history],
+  )
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return history.filter((it) => {
@@ -158,7 +164,7 @@ export function HistorySheet({
               </div>
               <ul>
                 {g.items.map((it) => {
-                  const { icon, title, sub } = rowVisuals(it.type, it.content)
+                  const { icon, title, sub } = rowVisuals(it.type, it.content, titles)
                   const isSwiped = swipe.id === it.id && swipe.dx < 0
                   return (
                     <li key={it.id} className="relative overflow-hidden rounded-xl">
@@ -285,9 +291,9 @@ async function exportJson(history: HistoryRecord[]) {
 }
 
 async function exportCsv(history: HistoryRecord[]) {
-  const header = 'content,type,label,scannedAt'
+  const header = 'content,type,label,title,scannedAt'
   const rows = history.map((it) =>
-    [it.content, it.type, it.label, new Date(it.createdAt).toISOString()].map(csvField).join(','),
+    [it.content, it.type, it.label, it.title ?? '', new Date(it.createdAt).toISOString()].map(csvField).join(','),
   )
   download(`qr-history-${new Date().toISOString().slice(0, 10)}.csv`, '\uFEFF' + [header, ...rows].join('\r\n'), 'text/csv;charset=utf-8')
 }

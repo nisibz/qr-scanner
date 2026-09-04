@@ -13,15 +13,51 @@ QrScanner.WORKER_PATH = new URL('../../vendor/qr-scanner-worker.min.js', import.
  * raw exception text.
  */
 export class ScannerError extends Error {
-  constructor(name, message) {
+  constructor(name: string, message: string) {
     super(message);
     this.name = name;
   }
 }
 
+/** Public surface of the scanner wrapper consumed by the UI layer. */
+export interface ScannerHandle {
+  start(): Promise<void>;
+  stop(): Promise<void>;
+  scanFile(file: Blob): Promise<string>;
+  destroy(): void;
+  getRaw(): QrScannerLike | null;
+  getActiveTrack(): MediaStreamTrack | null;
+  getTorchState(): { supported: boolean; on?: boolean };
+  setTorch(on: boolean): Promise<boolean>;
+  getZoomState(): { supported: boolean; min?: number; max?: number; step?: number; current?: number };
+  setZoom(level: number): Promise<boolean>;
+  listCameras(): Promise<Array<{ id: string; label: string }>>;
+  setCamera(deviceId: string): Promise<void>;
+}
+
+interface QrScannerLike {
+  start(): Promise<void>;
+  stop(): void;
+  destroy(): void;
+  setCamera(deviceId: string): Promise<void>;
+}
+
+interface QrScannerStatic {
+  WORKER_PATH: string;
+  new (
+    video: HTMLVideoElement,
+    onResult: (result: string | { data: string }) => void,
+    opts?: Record<string, unknown>,
+  ): QrScannerLike;
+  hasCamera(): Promise<boolean>;
+  scanImage(image: Blob): Promise<string | { data: string }>;
+  listCameras(): Promise<Array<{ id: string; label: string }>>;
+}
+const QrScannerCtor = QrScanner as unknown as QrScannerStatic;
+
 export async function hasCamera() {
   try {
-    return await QrScanner.hasCamera();
+    return await QrScannerCtor.hasCamera();
   } catch {
     return false;
   }
@@ -45,15 +81,15 @@ export async function hasCamera() {
  *   setCamera: (deviceId: string) => Promise<void>,
  * }}
  */
-export function createScanner({ video, onResult } = {}) {
+export function createScanner({ video, onResult }: { video: HTMLVideoElement; onResult?: (text: string) => void }): ScannerHandle {
   if (!video) throw new Error('createScanner: video element required');
 
-  let scanner = null;
+  let scanner: QrScannerLike | null = null;
   let started = false;
 
-  function ensure() {
+  function ensure(): QrScannerLike {
     if (scanner) return scanner;
-    scanner = new QrScanner(
+    scanner = new QrScannerCtor(
       video,
       (res) => {
         const data = typeof res === 'string' ? res : (res && res.data) || '';
@@ -72,10 +108,10 @@ export function createScanner({ video, onResult } = {}) {
     return scanner;
   }
 
-  function getActiveTrack() {
-    const stream = video.srcObject;
+  function getActiveTrack(): MediaStreamTrack | null {
+    const stream = video.srcObject as MediaStream | null;
     if (!stream) return null;
-    const tracks = stream.getVideoTracks ? stream.getVideoTracks() : [];
+    const tracks = stream.getVideoTracks();
     return tracks[0] || null;
   }
 
@@ -97,8 +133,8 @@ export function createScanner({ video, onResult } = {}) {
         started = false;
       }
     },
-    async scanFile(file) {
-      const res = await QrScanner.scanImage(file);
+    async scanFile(file: Blob): Promise<string> {
+      const res = await QrScannerCtor.scanImage(file);
       return typeof res === 'string' ? res : (res && res.data) || '';
     },
     destroy() {
@@ -108,7 +144,7 @@ export function createScanner({ video, onResult } = {}) {
         started = false;
       }
     },
-    getRaw() {
+    getRaw(): QrScannerLike | null {
       return scanner;
     },
     getActiveTrack,
@@ -117,18 +153,18 @@ export function createScanner({ video, onResult } = {}) {
     getTorchState() {
       const track = getActiveTrack();
       if (!track || !track.getCapabilities) return { supported: false };
-      const caps = track.getCapabilities();
+      const caps = track.getCapabilities() as MediaTrackCapabilities & { torch?: boolean };
       if (!caps || !caps.torch) return { supported: false };
-      const settings = track.getSettings ? track.getSettings() : {};
+      const settings = track.getSettings ? (track.getSettings() as { torch?: boolean }) : {};
       return { supported: true, on: !!settings.torch };
     },
-    async setTorch(on) {
+    async setTorch(on: boolean): Promise<boolean> {
       const track = getActiveTrack();
       if (!track || !track.applyConstraints) return false;
-      const caps = track.getCapabilities && track.getCapabilities();
+      const caps = track.getCapabilities && (track.getCapabilities() as MediaTrackCapabilities & { torch?: boolean });
       if (!caps || !caps.torch) return false;
       try {
-        await track.applyConstraints({ advanced: [{ torch: !!on }] });
+        await track.applyConstraints({ advanced: [{ torch: !!on }] } as unknown as MediaTrackConstraints);
         return true;
       } catch {
         return false;
@@ -139,9 +175,11 @@ export function createScanner({ video, onResult } = {}) {
     getZoomState() {
       const track = getActiveTrack();
       if (!track || !track.getCapabilities) return { supported: false };
-      const caps = track.getCapabilities();
+      const caps = track.getCapabilities() as MediaTrackCapabilities & {
+        zoom?: { min: number; max: number; step?: number };
+      };
       if (!caps || !caps.zoom) return { supported: false };
-      const settings = track.getSettings ? track.getSettings() : {};
+      const settings = track.getSettings ? (track.getSettings() as { zoom?: number }) : {};
       return {
         supported: true,
         min: caps.zoom.min,
@@ -150,11 +188,11 @@ export function createScanner({ video, onResult } = {}) {
         current: settings.zoom != null ? settings.zoom : caps.zoom.min,
       };
     },
-    async setZoom(level) {
+    async setZoom(level: number): Promise<boolean> {
       const track = getActiveTrack();
       if (!track || !track.applyConstraints) return false;
       try {
-        await track.applyConstraints({ advanced: [{ zoom: level }] });
+        await track.applyConstraints({ advanced: [{ zoom: level }] } as unknown as MediaTrackConstraints);
         return true;
       } catch {
         return false;
@@ -162,15 +200,15 @@ export function createScanner({ video, onResult } = {}) {
     },
 
     // ── Camera enumeration / switching ──
-    async listCameras() {
+    async listCameras(): Promise<Array<{ id: string; label: string }>> {
       try {
-        const cams = await QrScanner.getCameras();
-        return (cams || []).map((c) => ({ id: c.id, label: c.label }));
+        const cams: Array<{ id: string; label: string }> = await QrScannerCtor.listCameras();
+        return cams || [];
       } catch {
         return [];
       }
     },
-    async setCamera(deviceId) {
+    async setCamera(deviceId: string): Promise<void> {
       const s = ensure();
       // qr-scanner accepts a deviceId or a facingMode string.
       await s.setCamera(deviceId);
@@ -182,17 +220,18 @@ export function createScanner({ video, onResult } = {}) {
  * Map a raw exception (from scanner.start or scanImage) into a ScannerError
  * with a stable name. Already-typed ScannerError instances pass through.
  */
-export function mapCameraError(err) {
+export function mapCameraError(err: unknown): ScannerError {
   if (!err) return new ScannerError('Unknown', 'unknown error');
   if (err instanceof ScannerError) return err;
-  if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
-    return new ScannerError(err.name, 'Camera permission denied.');
+  const e = err as { name?: string; message?: string };
+  if (e.name === 'NotAllowedError' || e.name === 'SecurityError') {
+    return new ScannerError(e.name, 'Camera permission denied.');
   }
-  if (err.name === 'NotFoundError') {
-    return new ScannerError(err.name, 'No camera found.');
+  if (e.name === 'NotFoundError') {
+    return new ScannerError(e.name, 'No camera found.');
   }
-  if (err.name === 'NotReadableError') {
-    return new ScannerError(err.name, 'Camera is in use by another app.');
+  if (e.name === 'NotReadableError') {
+    return new ScannerError(e.name, 'Camera is in use by another app.');
   }
-  return new ScannerError(err.name || 'Unknown', err.message || 'unknown error');
+  return new ScannerError(e.name || 'Unknown', e.message || 'unknown error');
 }
