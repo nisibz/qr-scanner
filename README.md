@@ -3,11 +3,14 @@
 A fast, installable, offline-capable QR code scanner. Live camera scan + scan-from-image-file.
 No build step, plain static HTML/CSS/JS, deployable to Cloudflare Pages.
 
+<!-- Screenshots: docs/screenshot-scan.png + docs/screenshot-history.png -->
+
 ## Features
 - 📷 Live camera scanning (rear camera preferred)
 - 🖼️ Scan a QR from an uploaded image file
 - 🧠 Smart result handling — detects URL / Wi-Fi / vCard / MECARD / email / phone / SMS / location / calendar event / crypto address and offers type-specific actions (open, call, compose, download `.vcf`/`.ics`, copy password…). Suspicious URLs trigger a safety warning.
-- 📚 Scan history (IndexedDB, on-device) with search, type filter, export, and a per-device privacy toggle
+- 📱 **Bottom-sheet results** — the decoded card slides up over the camera instead of scrolling the page away, so the code you're aiming at stays in view (docks inline on desktop)
+- 📚 Scan history (IndexedDB, on-device, capped at 500 newest): search, type filter, Export JSON / Export CSV / Import (device-to-device move without a server), per-device privacy toggle
 - 🔦 Camera controls (when the device supports them): torch/flashlight, zoom slider, front/rear camera switch
 - 📥 Batch mode — collect many unique scans into a working list (inventory, check-in) and export it
 - 📋 Copy result / 🔗 open URLs in one tap
@@ -35,15 +38,16 @@ Then open the printed URL (e.g. `http://localhost:3000`) and grant camera permis
 
 ## Deploy to Cloudflare Pages
 
-**One-time:** log in with `npx wrangler login` (or set `CLOUDFLARE_API_TOKEN`).
+**Automatic (recommended):** every push to `main` deploys via GitHub Actions
+(`.github/workflows/deploy.yml`). One-time setup: add a repository secret
+`CLOUDFLARE_API_TOKEN` with the *"Cloudflare Pages — Edit"* permission
+([create token](https://dash.cloudflare.com/profile/api-tokens) → repo *Settings → Secrets and variables → Actions*).
 
-Then, from the project root:
+**Manual:** log in with `npx wrangler login` (or set `CLOUDFLARE_API_TOKEN`), then from the project root:
 
 ```bash
 npx wrangler pages deploy .
 ```
-
-On the first run, Wrangler will prompt for a project name and create it. Subsequent deploys push straight to production over HTTPS.
 
 **Git integration (CI deploys):** connect this repo in the Cloudflare dashboard → Workers & Pages → *Create* → *Pages* → *Connect to Git*. This is a **pure static site with no build step**, so set:
 - **Framework preset:** *None*

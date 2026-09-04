@@ -187,17 +187,34 @@ body {
 .filepick .btn { width: 100%; flex: none; }
 
 /* Result */
+/* Mobile: bottom sheet overlaying the camera — after a scan the card slides
+   up over the lower half of the viewport so the camera (and the code the user
+   is aiming at) stays visible; no page scrolling, dismiss restores instantly. */
 .result {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  z-index: 45; /* above install banner (40), below history overlay (50) */
+  width: calc(100% - 20px);
+  max-width: var(--maxw);
+  max-height: min(72dvh, 640px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  animation: pop 0.18s ease;
+  animation: sheetUp 0.22s ease;
 }
-@keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes sheetUp {
+  from { opacity: 0; transform: translate(-50%, 24px); }
+  to { opacity: 1; transform: translateX(-50%); }
+}
 
 .result__label {
   margin: 0;
@@ -300,7 +317,26 @@ input[type="file"] { display: none; }
      so its position is independent of the result row below. */
   .app__header { grid-area: header; align-self: start; }
   .scanner { grid-area: scanner; }
-  .result { grid-area: result; align-self: start; }
+  /* Desktop: the result docks back inline, right of the camera — the sheet
+     overlay only makes sense on phones where the camera owns the screen. */
+  .result {
+    grid-area: result;
+    align-self: start;
+    position: static;
+    transform: none;
+    bottom: auto;
+    z-index: auto;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    overflow: visible;
+    box-shadow: none;
+    animation: resultPop 0.18s ease;
+  }
+  @keyframes resultPop {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
 
   /* Viewport fills available height instead of a fixed square. */
   .scanner__viewport {

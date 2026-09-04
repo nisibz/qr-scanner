@@ -48,6 +48,9 @@ const historyEnabled = $('historyEnabled');
 const historyList = $('historyList');
 const historyEmpty = $('historyEmpty');
 const historyExport = $('historyExport');
+const historyExportCsv = $('historyExportCsv');
+const historyImport = $('historyImport');
+const importInput = $('importInput');
 const historyClear = $('historyClear');
 
 // Install prompt elements
@@ -96,13 +99,10 @@ function renderResult(parsed) {
   renderWarning(parsed.safety);
   renderActions(parsed.actions || []);
   result.hidden = false;
-  // Only scroll into view and buzz when a genuinely new code is shown; on
-  // repeat frames of the same code this would otherwise snap the page back
-  // and vibrate up to 10 times per second.
-  if (isNew) {
-    result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    if (navigator.vibrate) navigator.vibrate(40);
-  }
+  // The result is a bottom sheet overlaying the camera on mobile (inline on
+  // desktop) — it appears in place, no scrolling needed. Only buzz on a
+  // genuinely new code; repeat frames would otherwise vibrate 10 times/sec.
+  if (isNew && navigator.vibrate) navigator.vibrate(40);
 }
 
 function renderFields(fields) {
@@ -330,7 +330,6 @@ function renderBatch() {
 function openBatchView() {
   batchView.hidden = false;
   renderBatch();
-  batchView.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ────────────────────────────── History UI ──────────────────────────────
@@ -449,7 +448,6 @@ function openHistory() {
   historyView.hidden = false;
   historyEnabled.checked = history.isHistoryEnabled();
   renderHistory();
-  historyView.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function closeHistory() {
@@ -652,6 +650,12 @@ batchClear.addEventListener('click', () => {
 // History events
 historyBtn.addEventListener('click', openHistory);
 historyClose.addEventListener('click', closeHistory);
+// Escape closes whichever full-screen overlay is open (history on top of batch).
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!historyView.hidden) closeHistory();
+  else if (!batchView.hidden) batchView.hidden = true;
+});
 historySearch.addEventListener('input', renderHistory);
 historyFilter.addEventListener('change', renderHistory);
 historyEnabled.addEventListener('change', () => {
@@ -668,6 +672,37 @@ historyExport.addEventListener('click', async () => {
     );
   } catch {
     setStatus('Export failed.');
+  }
+});
+
+historyExportCsv.addEventListener('click', async () => {
+  try {
+    const csv = await history.exportScansCsv();
+    // BOM so Excel opens UTF-8 content (e.g. non-ASCII QR payloads) correctly.
+    downloadBlob(
+      `qr-history-${new Date().toISOString().slice(0, 10)}.csv`,
+      '\uFEFF' + csv,
+      'text/csv;charset=utf-8',
+    );
+  } catch {
+    setStatus('Export failed.');
+  }
+});
+
+// Import merges a previously exported JSON file back into history (deduped by
+// content+timestamp), enabling device-to-device moves without a server.
+historyImport.addEventListener('click', () => importInput.click());
+importInput.addEventListener('change', async () => {
+  const file = importInput.files && importInput.files[0];
+  importInput.value = ''; // allow re-picking the same file
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const added = await history.importScans(JSON.parse(text));
+    await Promise.all([renderHistory(), refreshHistoryCount()]);
+    setStatus(added > 0 ? `Imported ${added} scan${added === 1 ? '' : 's'}` : 'Nothing new to import.');
+  } catch {
+    setStatus('Import failed — expected a JSON export from this app.');
   }
 });
 historyClear.addEventListener('click', async () => {
