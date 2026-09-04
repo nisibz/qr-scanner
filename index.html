@@ -105,11 +105,23 @@
       <p id="historyEmpty" class="history__empty" hidden>No matching scans.</p>
 
       <footer class="history__foot">
-        <button id="historyExport" class="chip chip--small" type="button">Export JSON</button>
-        <button id="historyExportCsv" class="chip chip--small" type="button">Export CSV</button>
-        <button id="historyImport" class="chip chip--small" type="button">Import</button>
+        <button id="historyExport" class="footbtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10m0 0l-4-4m4 4l4-4M4 18v1a2 2 0 002 2h12a2 2 0 002-2v-1"/></svg>
+          <span>JSON</span>
+        </button>
+        <button id="historyExportCsv" class="footbtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10m0 0l-4-4m4 4l4-4M4 18v1a2 2 0 002 2h12a2 2 0 002-2v-1"/></svg>
+          <span>CSV</span>
+        </button>
+        <button id="historyImport" class="footbtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V4m0 0l-4 4m4-4l4 4M4 18v1a2 2 0 002 2h12a2 2 0 002-2v-1"/></svg>
+          <span>Import</span>
+        </button>
         <input id="importInput" type="file" accept="application/json,.json" hidden>
-        <button id="historyClear" class="chip chip--small chip--danger" type="button">Clear all</button>
+        <button id="historyClear" class="footbtn footbtn--danger" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m3 0l-.8 12a2 2 0 01-2 1.9H8.8a2 2 0 01-2-1.9L6 7"/></svg>
+          <span>Clear</span>
+        </button>
       </footer>
     </section>
 
@@ -122,8 +134,14 @@
       <ul id="batchList" class="history__list" aria-live="polite"></ul>
       <p id="batchEmpty" class="history__empty" hidden>No scans in this batch yet.</p>
       <footer class="history__foot">
-        <button id="batchExport" class="chip chip--small" type="button">Export JSON</button>
-        <button id="batchClear" class="chip chip--small chip--danger" type="button">Clear batch</button>
+        <button id="batchExport" class="footbtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10m0 0l-4-4m4 4l4-4M4 18v1a2 2 0 002 2h12a2 2 0 002-2v-1"/></svg>
+          <span>Export</span>
+        </button>
+        <button id="batchClear" class="footbtn footbtn--danger" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m3 0l-.8 12a2 2 0 01-2 1.9H8.8a2 2 0 01-2-1.9L6 7"/></svg>
+          <span>Clear</span>
+        </button>
       </footer>
     </section>
 
