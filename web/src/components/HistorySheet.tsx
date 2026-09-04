@@ -111,6 +111,10 @@ export function HistorySheet({
                   />
                 </div>
                 <div className="mx-2 my-1 border-t" />
+                <DropdownMenuItem onClick={() => void exportJson(history)}>↓ Export JSON</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => void exportCsv(history)}>↓ Export CSV</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setMenuOpen(false); fileInput.current?.click() }}>↑ Import from file…</DropdownMenuItem>
+                <div className="mx-2 my-1 border-t" />
                 <div className="flex items-center justify-between px-2 py-1.5 text-sm text-muted-foreground">
                   <span>Version</span>
                   <span className="tabular-nums" data-testid="version">{version}</span>
@@ -237,25 +241,7 @@ export function HistorySheet({
           ))}
         </ul>
 
-        <div className="flex justify-center gap-2 border-t px-4 pb-[calc(8px+env(safe-area-inset-bottom))] pt-2">
-          {/* Export: one button, format chosen in the menu — most people use
-              one format; two permanent buttons were visual noise. */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="text-muted-foreground">
-                <span aria-hidden="true">↓</span> Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="center">
-              <DropdownMenuItem onClick={() => void exportJson(history)}>Export JSON</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => void exportCsv(history)}>Export CSV</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button variant="ghost" className="text-muted-foreground" onClick={() => fileInput.current?.click()}>
-            <span aria-hidden="true">↑</span> Import
-          </Button>
-          <input ref={fileInput} type="file" accept="application/json,.json" hidden onChange={(e) => { void onFileImport(e.target.files?.[0]); e.target.value = '' }} />
-        </div>
+        <input ref={fileInput} type="file" accept="application/json,.json" hidden onChange={(e) => { void onFileImport(e.target.files?.[0]); e.target.value = '' }} />
       </SheetContent>
 
       <AlertDialog open={confirmDelete != null} onOpenChange={(v) => !v && setConfirmDelete(null)}>

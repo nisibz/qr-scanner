@@ -48,24 +48,14 @@ export function rowVisuals(
         const u = new URL(content);
         const saved = titles?.get(content);
         if (saved) {
-          // e.g. "Example Domain — About" · example.com
+          // e.g. "Example Domain" · example.com — captured from the page
+          // <title> at scan time; the most reliable human-readable label.
           return { icon: ICONS.url, title: truncate(saved, 48), sub: u.host.replace(/^www\./, '') };
         }
-        const path = u.pathname.replace(/\/$/, '');
-        const segments = path.split('/').filter(Boolean);
-        const last = segments[segments.length - 1];
-        // Prefer the last path segment (often descriptive: /articles/qr-guide)
-        // prettified; fall back to host when the path is bare.
-        if (last) {
-          const pretty = last
-            .replace(/\.(html?|php|aspx?)$/i, '')
-            .replace(/[-_]+/g, ' ')
-            .replace(/^\w/, (c) => c.toUpperCase());
-          if (pretty.length >= 3) {
-            return { icon: ICONS.url, title: truncate(pretty, 48), sub: u.host.replace(/^www\./, '') };
-          }
-        }
-        return { icon: ICONS.url, title: u.host.replace(/^www\./, ''), sub: 'Website' };
+        // No saved title: show the domain (stable, truthful) rather than a
+        // prettified path segment, which reads as noise for URLs you don't
+        // recognise. The full path is still in the raw payload — tap to view.
+        return { icon: ICONS.url, title: u.host.replace(/^www\./, ''), sub: 'Website — tap for full URL' };
       }
       case 'wifi': {
         const m = content.match(/S:([^;]+)/);

@@ -48,8 +48,11 @@ export function ResultSheet() {
   return (
     // Portal above everything (Sheet is z-50): the card owns its own scrim so
     // taps land here, never leak through to the History footer underneath.
+    // Radix's modal Dialog sets body pointer-events:none and re-enables only
+    // inside its own Content subtree — our portal lives outside that, so it
+    // must re-enable pointer events on its own root.
     createPortal(
-      <div className="fixed inset-0 z-[60]">
+      <div className="fixed inset-0 z-[60]" style={{ pointerEvents: 'auto' }}>
         <div
           aria-hidden="true"
           className="absolute inset-0 bg-black/40 animate-in fade-in duration-200"

@@ -36,10 +36,10 @@ test('history opens with seeded rows, day headers and version in menu', async ({
   // Day headers render.
   await expect(page.getByText('Today', { exact: true })).toBeVisible();
 
-  // Titled rows: SSID for Wi-Fi; URL path segment prettified to "Hello"
-  // (domain moves to the subtitle); vCard shows the contact name.
+  // Titled rows: SSID for Wi-Fi; URL without saved title shows the domain
+  // (truthful, unambiguous); vCard shows the contact name.
   await expect(page.getByText('MyNetwork')).toBeVisible();
-  await expect(page.locator('.truncate', { hasText: 'Hello' })).toBeVisible();
+  await expect(page.locator('.truncate', { hasText: 'example.com' })).toBeVisible();
   await expect(page.locator('.truncate', { hasText: 'Jane Doe' })).toBeVisible();
 
   // Version lives in the ⋯ menu.
