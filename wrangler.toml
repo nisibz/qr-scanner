@@ -1,6 +1,7 @@
 name = "qr-scanner"
-compatibility_date = "2026-06-14"
+compatibility_date = "2026-09-01"
 
-# Static-assets deploy. The whole repo root is the site (no build step).
+# Built static assets from the Vite app.
+# Deploy: cd web && bun run build && npx wrangler deploy
 [assets]
-directory = "."
+directory = "./web/dist"

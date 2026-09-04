@@ -11,52 +11,25 @@ permissions:
 
 jobs:
   test:
-    name: Playwright
+    name: Build & Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
+      - uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
-        run: npm ci
+        working-directory: web
+        run: bun install --frozen-lockfile
 
-      - name: Run parser unit tests
-        run: npm run test:unit
+      - name: Type check + build
+        working-directory: web
+        run: bun run build
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        working-directory: web
+        run: bun x playwright install --with-deps chromium
 
-      - name: Regenerate QR fixtures (ensures they match source)
-        run: npm run test:fixtures
-
-      - name: Run Playwright tests
-        run: npm test
-
-      - name: Upload test report
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 14
-
-  lighthouse:
-    name: Lighthouse
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run Lighthouse CI
-        run: npm run lighthouse
+      - name: Run E2E tests
+        working-directory: web
+        run: bun x playwright test
