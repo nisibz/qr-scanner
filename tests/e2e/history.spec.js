@@ -41,29 +41,22 @@ test('history view lists saved scans with type badge and timestamp', async ({ pa
   await page.locator('#historyBtn').click();
   await expect(page.locator('#historyView')).toBeVisible();
 
-  const item = page.locator('.hitem').first();
-  await expect(item.locator('.hitem__type')).toHaveText('Wi-Fi');
-  await expect(item.locator('.hitem__body')).toContainText('WIFI:S:MyNetwork');
-  await expect(item.locator('.hitem__time')).not.toBeEmpty();
+  const item = page.locator('.prow').first();
+  await expect(item.locator('.prow__sub')).toHaveText('Wi-Fi');
+  await expect(item.locator('.prow__title')).toContainText('MyNetwork');
+  await expect(item.locator('.prow__time')).not.toBeEmpty();
 });
 
-test('history items show primary + Copy action buttons', async ({ page, context }) => {
-  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+test('history rows no longer render inline action buttons', async ({ page }) => {
+  // Rows are compact now (icon + title + time); actions live in the result
+  // card when the row is tapped, not inline in the list.
   await page.locator('#fileInput').setInputFiles(fixture('url'));
   await expect(page.locator('#historyCount')).toHaveText('1');
 
   await page.locator('#historyBtn').click();
-  const actions = page.locator('#historyList .hitem').first().locator('.hitem__actions');
-
-  // URL → Open (link, primary) + Copy (button)
-  await expect(actions.locator('a.btn--primary')).toHaveText('Open');
-  await expect(actions.locator('a.btn--primary')).toHaveAttribute('href', 'https://example.com/hello');
-  await expect(actions.getByRole('button', { name: 'Copy' })).toBeVisible();
-
-  await actions.getByRole('button', { name: 'Copy' }).click();
-  await expect(page.locator('#status')).toContainText(/Copied/i);
-  const clip = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clip).toBe('https://example.com/hello');
+  await expect(page.locator('.prow')).toHaveCount(1);
+  await expect(page.locator('.prow button.btn')).toHaveCount(0);
+  await expect(page.locator('.prow .prow__title')).toHaveText(/example\.com/);
 });
 
 test('search filters the history list', async ({ page }) => {
@@ -72,14 +65,14 @@ test('search filters the history list', async ({ page }) => {
   await expect(page.locator('#historyCount')).toHaveText('2');
 
   await page.locator('#historyBtn').click();
-  await expect(page.locator('.hitem')).toHaveCount(2);
+  await expect(page.locator('.prow')).toHaveCount(2);
 
   await page.locator('#historySearch').fill('example.com');
-  await expect(page.locator('.hitem')).toHaveCount(1);
-  await expect(page.locator('.hitem__body').first()).toContainText('example.com');
+  await expect(page.locator('.prow')).toHaveCount(1);
+  await expect(page.locator('.prow__title').first()).toContainText('example.com');
 
   await page.locator('#historySearch').fill('no-match-query');
-  await expect(page.locator('.hitem')).toHaveCount(0);
+  await expect(page.locator('.prow')).toHaveCount(0);
   await expect(page.locator('#historyEmpty')).toBeVisible();
 });
 
@@ -89,10 +82,10 @@ test('type filter narrows the list', async ({ page }) => {
   await expect(page.locator('#historyCount')).toHaveText('2');
 
   await page.locator('#historyBtn').click();
-  await expect(page.locator('.hitem')).toHaveCount(2);
+  await expect(page.locator('.prow')).toHaveCount(2);
 
   await page.locator('#historyFilter').selectOption('text');
-  await expect(page.locator('.hitem')).toHaveCount(1);
+  await expect(page.locator('.prow')).toHaveCount(1);
 });
 
 test('tapping an item re-displays the result and closes history', async ({ page }) => {
@@ -100,7 +93,7 @@ test('tapping an item re-displays the result and closes history', async ({ page 
   await expect(page.locator('#historyCount')).toHaveText('1');
 
   await page.locator('#historyBtn').click();
-  await page.locator('.hitem__body').first().click();
+  await page.locator('.prow__title').first().click();
 
   await expect(page.locator('#historyView')).toBeHidden();
   await expect(page.locator('#result')).toBeVisible();
@@ -112,28 +105,47 @@ test('re-displaying a history item does not create a duplicate', async ({ page }
   await expect(page.locator('#historyCount')).toHaveText('1');
 
   await page.locator('#historyBtn').click();
-  await expect(page.locator('.hitem')).toHaveCount(1);
+  await expect(page.locator('.prow')).toHaveCount(1);
 
-  await page.locator('.hitem__body').first().click();
+  await page.locator('.prow__title').first().click();
   await expect(page.locator('#result')).toBeVisible();
 
   // Re-opening history must still show a single entry — re-viewing must not persist again.
   await page.locator('#historyBtn').click();
-  await expect(page.locator('.hitem')).toHaveCount(1);
+  await expect(page.locator('.prow')).toHaveCount(1);
   await expect(page.locator('#historyCount')).toHaveText('1');
 });
 
-test('delete removes a single item', async ({ page }) => {
+test('swiping a row left deletes it', async ({ page }) => {
   await page.locator('#fileInput').setInputFiles(fixture('url'));
   await page.locator('#fileInput').setInputFiles(fixture('plain'));
   await expect(page.locator('#historyCount')).toHaveText('2');
 
   await page.locator('#historyBtn').click();
-  await expect(page.locator('.hitem')).toHaveCount(2);
+  await expect(page.locator('.prow')).toHaveCount(2);
 
-  await page.locator('.hitem').first().locator('.hitem__del').click();
-  await expect(page.locator('.hitem')).toHaveCount(1);
+  // Simulate a left swipe past the delete threshold on the first row.
+  const row = page.locator('.prow').first();
+  const box = await row.boundingBox();
+  const y = box.y + box.height / 2;
+  const x = box.x + box.width / 2;
+
+  await row.dispatchEvent('touchstart', {
+    touches: [{ identifier: 1, clientX: x, clientY: y }],
+    changedTouches: [{ identifier: 1, clientX: x, clientY: y }],
+  });
+  await row.dispatchEvent('touchmove', {
+    touches: [{ identifier: 1, clientX: x - 90, clientY: y }],
+    changedTouches: [{ identifier: 1, clientX: x - 90, clientY: y }],
+  });
+  await row.dispatchEvent('touchend', {
+    touches: [],
+    changedTouches: [{ identifier: 1, clientX: x - 90, clientY: y }],
+  });
+
+  await expect(page.locator('.prow')).toHaveCount(1);
   await expect(page.locator('#historyCount')).toHaveText('1');
+  await expect(page.locator('#status')).toContainText(/Deleted/i);
 });
 
 test('Clear all empties history after confirmation', async ({ page }) => {
@@ -143,7 +155,7 @@ test('Clear all empties history after confirmation', async ({ page }) => {
   page.on('dialog', (d) => d.accept());
   await page.locator('#historyClear').click();
 
-  await expect(page.locator('.hitem')).toHaveCount(0);
+  await expect(page.locator('.prow')).toHaveCount(0);
   await expect(page.locator('#historyEmpty')).toBeVisible();
   await expect(page.locator('#historyCount')).toBeHidden();
 });

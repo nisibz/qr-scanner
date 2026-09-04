@@ -59,7 +59,7 @@ test('import merges a JSON export and re-importing the same file adds nothing', 
   });
 
   await expect(page.locator('#status')).toContainText(/Imported 2 scans/);
-  await expect(page.locator('.hitem')).toHaveCount(2);
+  await expect(page.locator('.prow')).toHaveCount(2);
   await expect(page.locator('#historyCount')).toHaveText('2');
 
   // Re-importing the same file is a no-op (deduped by content+createdAt).

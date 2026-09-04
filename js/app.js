@@ -202,19 +202,6 @@ function fallbackCopy(text) {
   }
 }
 
-// Compact action set for history rows: the primary action plus a Copy
-// fallback. Reuses the parser's own Copy when present (so labels/values
-// stay tailored, e.g. "Copy number" for tel:); synthesizes a raw Copy
-// only for payloads that have none (e.g. vCard).
-function pickPrimaryActions(parsed) {
-  const all = parsed.actions || [];
-  if (!all.length) return [];
-  const primary = all.find((a) => a.primary) || all[0];
-  const copy = all.find((a) => a.kind === 'copy')
-    || { kind: 'copy', label: 'Copy', value: parsed.raw };
-  return primary === copy ? [primary] : [primary, copy];
-}
-
 function downloadBlob(filename, content, mime) {
   try {
     const blob = new Blob([content], { type: mime || 'application/octet-stream' });
@@ -363,6 +350,95 @@ function openBatchView() {
 
 // ────────────────────────────── History UI ──────────────────────────────
 
+// Icon paths per scan type (24×24 stroke icons, drawn in renderHistory).
+const TYPE_ICONS = {
+  url: 'M10 14a5 5 0 007.5.5l2-2a5 5 0 00-7-7l-1.2 1.1M14 10a5 5 0 00-7.5-.5l-2 2a5 5 0 007 7l1.2-1.1',
+  wifi: 'M2.5 9a15 15 0 0119 0M5.5 12.5a10.5 10.5 0 0113 0M8.5 16a6 6 0 017 0M12 19.5h.01',
+  vcard: 'M12 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM5 20a7 7 0 0114 0',
+  mecard: 'M12 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM5 20a7 7 0 0114 0',
+  vevent: 'M4 6h16v14H4zM4 10h16M9 3v4M15 3v4',
+  email: 'M3 6h18v12H3zM3 7l9 6 9-6',
+  mailto: 'M3 6h18v12H3zM3 7l9 6 9-6',
+  tel: 'M5 4h4l1.5 4.5L8 10a12 12 0 006 6l1.5-2.5L20 15v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2',
+  sms: 'M5 4h4l1.5 4.5L8 10a12 12 0 006 6l1.5-2.5L20 15v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2',
+  geo: 'M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11zM12 12a2.5 2.5 0 100-5 2.5 2.5 0 000 5z',
+  crypto: 'M12 2v20M17 6.5C17 4.6 14.8 4 12 4s-5 .9-5 2.5S9 9 12 9s5 .9 5 2.5S14.8 14 12 14s-5 .9-5 2.5S9.2 20 12 20s5-.6 5-2.5',
+  text: 'M4 6h16M4 12h16M4 18h10',
+};
+
+/**
+ * Short display name + subtitle for a history row. The parser's `title` is
+ * tuned for the result card (often the full payload, e.g. a URL); the list
+ * needs a scannable one-liner: domain for URLs, SSID for Wi-Fi, etc.
+ */
+function rowVisuals(type, content) {
+  const icon = TYPE_ICONS[type] || TYPE_ICONS.text;
+  try {
+    switch (type) {
+      case 'url': {
+        const u = new URL(content);
+        const path = u.pathname.replace(/\/$/, '');
+        const title = u.host.replace(/^www\./, '') + (path && path.length <= 24 ? path : '');
+        return { icon, title: title || u.host, sub: 'Website' };
+      }
+      case 'wifi': {
+        const m = content.match(/S:([^;]+)/);
+        return { icon, title: (m && m[1]) || 'Wi-Fi network', sub: 'Wi-Fi' };
+      }
+      case 'vcard':
+      case 'mecard': {
+        const fn = content.match(/FN[^:]*:([^\n]+)/) || content.match(/N:([^;\n]+)/);
+        return { icon, title: ((fn && fn[1]) || 'Contact').trim(), sub: 'Contact' };
+      }
+      case 'vevent': {
+        const s = content.match(/SUMMARY:([^\n]+)/);
+        return { icon, title: ((s && s[1]) || 'Event').trim(), sub: 'Event' };
+      }
+      case 'email':
+      case 'mailto':
+        return { icon, title: content.replace(/^mailto:/, ''), sub: 'Email' };
+      case 'tel':
+        return { icon, title: content.replace(/^tel:/, ''), sub: 'Phone' };
+      case 'sms': {
+        const num = content.match(/[:]?([+\d][\d-]{4,})/);
+        return { icon, title: (num && num[1]) || 'SMS', sub: 'SMS' };
+      }
+      case 'geo': {
+        const m = content.match(/-?[\d.]+,-?[\d.]+/);
+        return { icon, title: (m && m[0]) || 'Location', sub: 'Location' };
+      }
+      case 'crypto':
+        return { icon, title: content.slice(0, 10) + '…' + content.slice(-6), sub: 'Crypto address' };
+      default:
+        return { icon, title: truncate(content, 60), sub: 'Text' };
+    }
+  } catch {
+    return { icon: TYPE_ICONS.text, title: truncate(content, 60), sub: 'Text' };
+  }
+}
+
+// Day section header for a timestamp: Today / Yesterday / locale date.
+// Computed against LOCAL midnight so "Today" matches the user's day.
+function dayLabel(ts) {
+  const d = new Date(ts);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const sameDay = (a, b) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  if (sameDay(d, today)) return 'Today';
+  if (sameDay(d, yesterday)) return 'Yesterday';
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function clockTime(ts) {
+  try {
+    return new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+}
+
 function formatRelativeTime(ts) {
   const diff = Date.now() - ts;
   const sec = Math.round(diff / 1000);
@@ -412,57 +488,83 @@ async function renderHistory() {
   historyList.innerHTML = '';
   historyEmpty.hidden = items.length !== 0;
 
+  let currentDay = null;
   for (const it of items) {
+    // Day section headers — scan history is naturally time-oriented, so
+    // grouping by local day makes old entries findable at a glance.
+    const day = dayLabel(it.createdAt);
+    if (day !== currentDay) {
+      currentDay = day;
+      const h = document.createElement('li');
+      h.className = 'pday';
+      h.textContent = day;
+      h.setAttribute('aria-hidden', 'true');
+      historyList.appendChild(h);
+    }
+
+    const { icon, title, sub } = rowVisuals(it.type, it.content);
+
     const li = document.createElement('li');
-    li.className = 'hitem';
+    li.className = 'prow';
     li.dataset.id = it.id;
 
-    const meta = document.createElement('div');
-    meta.className = 'hitem__meta';
-
-    const badge = document.createElement('span');
-    badge.className = 'hitem__type';
-    badge.textContent = it.label || it.type || 'Text';
-    meta.appendChild(badge);
-
-    const time = document.createElement('time');
-    time.className = 'hitem__time';
-    time.dateTime = new Date(it.createdAt).toISOString();
-    time.textContent = formatRelativeTime(it.createdAt);
-    meta.appendChild(time);
-
-    li.appendChild(meta);
+    const tile = document.createElement('span');
+    tile.className = 'prow__icon';
+    tile.setAttribute('aria-hidden', 'true');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', icon);
+    svg.appendChild(path);
+    tile.appendChild(svg);
+    li.appendChild(tile);
 
     const body = document.createElement('button');
     body.type = 'button';
-    body.className = 'hitem__body';
-    body.textContent = truncate(it.content, 120);
+    body.className = 'prow__body';
+    const titleEl = document.createElement('span');
+    titleEl.className = 'prow__title';
+    titleEl.textContent = title;
+    const subEl = document.createElement('span');
+    subEl.className = 'prow__sub';
+    subEl.textContent = sub;
+    body.append(titleEl, subEl);
     body.addEventListener('click', () => viewHistoryItem(it));
     li.appendChild(body);
 
-    const histActions = pickPrimaryActions(parseResult(it.content));
-    if (histActions.length) {
-      const acts = document.createElement('div');
-      acts.className = 'hitem__actions';
-      for (const a of histActions) acts.appendChild(makeActionElement(a));
-      li.appendChild(acts);
-    }
+    const time = document.createElement('time');
+    time.className = 'prow__time';
+    time.dateTime = new Date(it.createdAt).toISOString();
+    time.textContent = clockTime(it.createdAt);
+    li.appendChild(time);
 
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'hitem__del';
-    del.setAttribute('aria-label', 'Delete this scan');
-    del.textContent = '✕';
-    del.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      try {
-        await history.removeScan(it.id);
-        await Promise.all([renderHistory(), refreshHistoryCount()]);
-      } catch {
-        /* ignore */
+    // Full-row swipe-to-delete on touch: translate the row past a threshold.
+    let startX = null;
+    li.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      li.style.transition = 'none';
+    }, { passive: true });
+    li.addEventListener('touchmove', (e) => {
+      if (startX === null) return;
+      const dx = Math.min(0, e.touches[0].clientX - startX);
+      li.style.transform = `translateX(${Math.max(dx, -96)}px)`;
+    }, { passive: true });
+    li.addEventListener('touchend', async (e) => {
+      if (startX === null) return;
+      li.style.transition = '';
+      const dx = e.changedTouches[0].clientX - startX;
+      li.style.transform = '';
+      startX = null;
+      if (dx < -72) {
+        try {
+          await history.removeScan(it.id);
+          await Promise.all([renderHistory(), refreshHistoryCount()]);
+          setStatus('Deleted');
+        } catch {
+          /* ignore */
+        }
       }
     });
-    li.appendChild(del);
 
     historyList.appendChild(li);
   }
