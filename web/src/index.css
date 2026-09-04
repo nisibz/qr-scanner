@@ -21,6 +21,8 @@
     --border: 240 5% 18%;
     --input: 240 5% 18%;
     --ring: 217 91% 60%;
+    --popover: 240 6% 10%;
+    --popover-foreground: 240 5% 90%;
     --radius: 0.875rem;
   }
 

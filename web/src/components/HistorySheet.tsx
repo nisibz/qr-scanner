@@ -81,7 +81,7 @@ export function HistorySheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="inset-0 h-full max-w-lg mx-auto rounded-none border-0 p-0 flex flex-col bg-background sm:max-w-lg sm:rounded-none">
+      <SheetContent side="bottom" showCloseButton={false} className="inset-0 h-full max-w-lg mx-auto rounded-none border-0 p-0 flex flex-col bg-background sm:max-w-lg sm:rounded-none">
         <SheetHeader className="flex-row items-center justify-between space-y-0 px-5 pt-5 pb-2">
           <SheetTitle className="text-xl">History</SheetTitle>
           <div className="flex items-center gap-2">
