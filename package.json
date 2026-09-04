@@ -1,6 +1,6 @@
 {
   "name": "qr-scanner-pwa",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "Fast, offline QR code scanner PWA. Scan with your camera or an image file.",
   "scripts": {

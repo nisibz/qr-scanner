@@ -105,13 +105,11 @@
       <p id="historyEmpty" class="history__empty" hidden>No matching scans.</p>
 
       <footer class="history__foot">
-        <button id="historyExport" class="btn btn--ghost" type="button">Export JSON</button>
-        <button id="historyExportCsv" class="btn btn--ghost" type="button">Export CSV</button>
-        <button id="historyImport" class="btn btn--ghost" type="button">Import</button>
+        <button id="historyExport" class="chip chip--small" type="button">Export JSON</button>
+        <button id="historyExportCsv" class="chip chip--small" type="button">Export CSV</button>
+        <button id="historyImport" class="chip chip--small" type="button">Import</button>
         <input id="importInput" type="file" accept="application/json,.json" hidden>
-      </footer>
-      <footer class="history__foot">
-        <button id="historyClear" class="btn btn--ghost" type="button">Clear all</button>
+        <button id="historyClear" class="chip chip--small chip--danger" type="button">Clear all</button>
       </footer>
     </section>
 
@@ -124,8 +122,8 @@
       <ul id="batchList" class="history__list" aria-live="polite"></ul>
       <p id="batchEmpty" class="history__empty" hidden>No scans in this batch yet.</p>
       <footer class="history__foot">
-        <button id="batchExport" class="btn btn--ghost" type="button">Export JSON</button>
-        <button id="batchClear" class="btn btn--ghost" type="button">Clear batch</button>
+        <button id="batchExport" class="chip chip--small" type="button">Export JSON</button>
+        <button id="batchClear" class="chip chip--small chip--danger" type="button">Clear batch</button>
       </footer>
     </section>
 
