@@ -182,6 +182,11 @@ body {
 .btn--primary:active { background: var(--accent-press); }
 
 .btn--ghost { background: transparent; }
+.btn--ok {
+  background: rgba(34, 197, 94, 0.16);
+  border-color: var(--ok);
+  color: var(--ok);
+}
 
 .filepick { display: block; }
 .filepick .btn { width: 100%; flex: none; }
@@ -385,6 +390,31 @@ input[type="file"] { display: none; }
   padding: calc(16px + env(safe-area-inset-top)) 20px 8px;
 }
 .history__head h2 { margin: 0; font-size: 1.25rem; letter-spacing: -0.01em; }
+.history__head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Version badge — quiet by design; tap it to copy the version string. */
+.version {
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  padding: 4px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.version:active { background: var(--border); }
+.version--copied {
+  color: var(--ok);
+  border-color: var(--ok);
+}
 
 .history__toolbar {
   display: flex;

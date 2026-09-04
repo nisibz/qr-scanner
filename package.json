@@ -1,6 +1,6 @@
 {
   "name": "qr-scanner-pwa",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Fast, offline QR code scanner PWA. Scan with your camera or an image file.",
   "scripts": {
@@ -9,6 +9,7 @@
     "test:unit": "node --test \"tests/unit/**/*.test.mjs\"",
     "test:ui": "playwright test --ui",
     "test:fixtures": "node tests/fixtures/generate.mjs",
+    "bump": "node scripts/bump-version.mjs",
     "lighthouse": "lhci autorun",
     "lighthouse:collect": "lhci collect --url=http://localhost:5173 --numberOfRuns=3"
   },

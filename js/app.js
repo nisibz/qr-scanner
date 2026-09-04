@@ -52,6 +52,7 @@ const historyExportCsv = $('historyExportCsv');
 const historyImport = $('historyImport');
 const importInput = $('importInput');
 const historyClear = $('historyClear');
+const appVersion = $('appVersion');
 
 // Install prompt elements
 const installPrompt = $('installPrompt');
@@ -156,11 +157,49 @@ function makeActionElement(a) {
   btn.className = 'btn ' + (a.primary ? 'btn--primary' : 'btn--ghost');
   btn.textContent = a.label;
   if (a.kind === 'copy') {
-    btn.addEventListener('click', () => copyText(a.value));
+    // Feedback goes on the button itself ("Copied ✓", brief green flash) —
+    // the status bar sits behind the bottom sheet and is easy to miss.
+    btn.addEventListener('click', async () => {
+      let ok = false;
+      try {
+        await navigator.clipboard.writeText(a.value);
+        ok = true;
+      } catch {
+        ok = fallbackCopy(a.value);
+      }
+      const original = a.label;
+      setStatus(ok ? 'Copied to clipboard' : 'Copy failed — select and copy manually.');
+      btn.textContent = ok ? 'Copied ✓' : 'Copy failed';
+      btn.classList.toggle('btn--ok', ok);
+      if (navigator.vibrate) navigator.vibrate(ok ? 20 : [10, 40, 10]);
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.classList.remove('btn--ok');
+      }, 1200);
+    });
   } else if (a.kind === 'download') {
     btn.addEventListener('click', () => downloadBlob(a.filename, a.content, a.mime));
   }
   return btn;
+}
+
+// Clipboard API needs a secure context and user permission; execCommand is the
+// legacy escape hatch (hidden textarea + select + copy) for the rest.
+function fallbackCopy(text) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch {
+    return false;
+  }
 }
 
 // Compact action set for history rows: the primary action plus a Copy
@@ -174,16 +213,6 @@ function pickPrimaryActions(parsed) {
   const copy = all.find((a) => a.kind === 'copy')
     || { kind: 'copy', label: 'Copy', value: parsed.raw };
   return primary === copy ? [primary] : [primary, copy];
-}
-
-async function copyText(value) {
-  try {
-    await navigator.clipboard.writeText(value);
-    setStatus('Copied to clipboard');
-    if (navigator.vibrate) navigator.vibrate(20);
-  } catch {
-    setStatus('Copy failed — select and copy manually.');
-  }
 }
 
 function downloadBlob(filename, content, mime) {
@@ -828,6 +857,47 @@ if (!isStandalone() && !isInstallDismissed()) {
   }
 }
 
-// Init: sync count badge + auto-start the camera.
+// Init: sync count badge + version + auto-start the camera.
+initVersionBadge();
 refreshHistoryCount();
 startCamera();
+
+// ────────────────────────────── Version badge ──────────────────────────────
+// Reads the version from the PWA manifest (kept in sync with package.json via
+// `npm run bump`) and shows it quietly in the History header. Tapping the
+// badge copies "QR Scanner <version>" and confirms by flashing the badge
+// green — feedback lives on the control itself, not in the camera status bar,
+// which the bottom sheet can cover.
+
+async function initVersionBadge() {
+  try {
+    const res = await fetch('./manifest.webmanifest');
+    const manifest = await res.json();
+    if (manifest && manifest.version) {
+      appVersion.querySelector('.version__num').textContent = manifest.version;
+      appVersion.hidden = false;
+    }
+  } catch {
+    /* offline-first failure or malformed manifest — badge simply stays hidden */
+  }
+}
+
+let versionCopyTimer = null;
+
+appVersion.addEventListener('click', async () => {
+  const v = appVersion.querySelector('.version__num').textContent;
+  if (!v) return;
+  try {
+    await navigator.clipboard.writeText(`QR Scanner v${v}`);
+  } catch {
+    /* clipboard blocked — still flash so the tap isn't a dead end */
+  }
+  appVersion.classList.add('version--copied');
+  appVersion.setAttribute('aria-label', `Copied version ${v}`);
+  if (navigator.vibrate) navigator.vibrate(15);
+  clearTimeout(versionCopyTimer);
+  versionCopyTimer = setTimeout(() => {
+    appVersion.classList.remove('version--copied');
+    appVersion.removeAttribute('aria-label');
+  }, 1200);
+});

@@ -72,7 +72,10 @@
     <section id="historyView" class="history" hidden aria-label="Scan history">
       <header class="history__head">
         <h2>History</h2>
-        <button id="historyClose" class="chip chip--small" type="button" aria-label="Close history">Done</button>
+        <div class="history__head-actions">
+          <span id="appVersion" class="version" hidden>v<span class="version__num"></span></span>
+          <button id="historyClose" class="chip chip--small" type="button" aria-label="Close history">Done</button>
+        </div>
       </header>
 
       <div class="history__toolbar">
