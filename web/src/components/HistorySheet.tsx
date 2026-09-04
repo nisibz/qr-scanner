@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from '@/state/AppContext'
 import { dayLabel, clockTime, rowVisuals, type HistoryRecord } from '@/lib/app'
+import { parseResult } from '@/lib/result-parser'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
@@ -116,23 +117,34 @@ export function HistorySheet({
           </div>
         </SheetHeader>
 
-        <div className="flex gap-2 px-4 pb-2">
+        {/* Segmented filter chips — one tap to the common types. */}
+        <div className="flex gap-1.5 overflow-x-auto px-4 pb-2" role="tablist" aria-label="Filter by type">
+          {FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              role="tab"
+              aria-selected={filter === f.value}
+              onClick={() => setFilter(f.value)}
+              className={cn(
+                'shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
+                filter === f.value
+                  ? 'border-accent bg-accent text-white'
+                  : 'border-border bg-card text-muted-foreground active:bg-border',
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="px-4 pb-2">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search history"
-            className="h-10 flex-1 rounded-md border bg-card px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-ring"
+            className="h-10 w-full rounded-md border bg-card px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-ring"
           />
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            aria-label="Filter by type"
-            className="h-10 rounded-md border bg-card px-2 text-sm text-muted-foreground outline-none"
-          >
-            {FILTERS.map((f) => (
-              <option key={f.value} value={f.value}>{f.label}</option>
-            ))}
-          </select>
         </div>
 
         <ul className="flex-1 overflow-y-auto px-2 pb-2">
@@ -191,8 +203,10 @@ export function HistorySheet({
                           if (isSwiped) return
                           if (it.id != null) {
                             const rec = it
-                            onOpenChange(false)
-                            actions.handleDecoded(rec.content, 'history')
+                            // Keep History open underneath — the result sheet
+                            // layers on top (higher z-index); dismissing
+                            // returns straight to the list, no camera jump.
+                            actions.showResult(parseResult(rec.content))
                           }
                         }}
                       >
@@ -218,12 +232,19 @@ export function HistorySheet({
         </ul>
 
         <div className="flex justify-center gap-2 border-t px-4 pb-[calc(8px+env(safe-area-inset-bottom))] pt-2">
-          <Button variant="ghost" className="text-muted-foreground" onClick={() => void exportJson(history)}>
-            <span aria-hidden="true">↓</span> Export JSON
-          </Button>
-          <Button variant="ghost" className="text-muted-foreground" onClick={() => void exportCsv(history)}>
-            <span aria-hidden="true">↓</span> Export CSV
-          </Button>
+          {/* Export: one button, format chosen in the menu — most people use
+              one format; two permanent buttons were visual noise. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="text-muted-foreground">
+                <span aria-hidden="true">↓</span> Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="center">
+              <DropdownMenuItem onClick={() => void exportJson(history)}>Export JSON</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => void exportCsv(history)}>Export CSV</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="ghost" className="text-muted-foreground" onClick={() => fileInput.current?.click()}>
             <span aria-hidden="true">↑</span> Import
           </Button>

@@ -48,7 +48,7 @@ export function ResultSheet() {
     <div
       role="dialog"
       aria-label="Scan result"
-      className="fixed inset-x-0 bottom-0 z-45 mx-auto w-[calc(100%-20px)] max-w-md max-h-[72dvh] overflow-y-auto rounded-xl border bg-card p-4 shadow-[0_-8px_32px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-4 fade-in duration-200"
+      className="fixed inset-x-0 bottom-0 z-[60] mx-auto w-[calc(100%-20px)] max-w-md max-h-[72dvh] overflow-y-auto rounded-xl border bg-card p-4 shadow-[0_-8px_32px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-4 fade-in duration-200"
       style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))' }}
     >
       <p className="text-[0.72rem] uppercase tracking-widest text-muted-foreground">{result.label || 'Decoded'}</p>
