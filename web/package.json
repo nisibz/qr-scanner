@@ -1,11 +1,10 @@
 {
   "name": "qr-scanner-web",
   "private": true,
-  "version": "2.2.8",
+  "version": "2.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node scripts/sync-version.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"

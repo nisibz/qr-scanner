@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useApp } from '@/state/AppContext'
 import { dayLabel, clockTime, rowVisuals, type HistoryRecord } from '@/lib/app'
 import { parseResult } from '@/lib/result-parser'
@@ -11,6 +11,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import * as historyStore from '@/lib/history-store'
 import { cn } from '@/lib/utils'
+import { APP_VERSION } from '@/lib/version'
 
 const FILTERS = [
   { value: 'all', label: 'All' },
@@ -29,10 +30,6 @@ interface SwipeState {
   dragging: boolean
 }
 
-// Module-level cache — the manifest never changes mid-session, so fetch it
-// once per app load, not per HistorySheet mount (StrictMode remounts in dev).
-let cachedVersion: string | null = null
-
 export function HistorySheet({
   open, onOpenChange,
 }: {
@@ -50,17 +47,8 @@ export function HistorySheet({
   const startX = useRef<number | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
-  const [version, setVersion] = useState(() => cachedVersion ?? '')
-  useEffect(() => {
-    if (cachedVersion) return
-    fetch('./manifest.webmanifest')
-      .then((r) => r.json())
-      .then((m) => {
-        cachedVersion = 'v' + m.version
-        setVersion(cachedVersion)
-      })
-      .catch(() => {})
-  }, [])
+  // Version is injected at build time from package.json — no fetch needed.
+  const version = `v${APP_VERSION}`
 
   // Content → saved page title (URLs fetched at scan time).
   const titles = useMemo(

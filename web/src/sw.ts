@@ -1,14 +1,14 @@
-// Cache-first service worker for the QR Scanner app shell.
-// This is a TEMPLATE: public/sw.js is generated from it at build time
-// (web/scripts/sync-version.mjs replaces 2.2.8 with the version
-// from package.json — the single source of truth). Never edit public/sw.js.
+// Service worker — bundled by Vite (lives in src/, not public/) so build-time
+// constants like __APP_VERSION__ are replaced by the compiler, not by a
+// string-replacement script. The cache name carries the app version from
+// package.json (single source of truth).
 
-const CACHE = 'qr-scanner-v2.2.8';
-const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.webmanifest',
-];
+/// <reference lib="webworker" />
+declare const __APP_VERSION__: string;
+declare let self: ServiceWorkerGlobalScope;
+
+const CACHE = `qr-scanner-v${__APP_VERSION__}`;
+const ASSETS = ['/', '/index.html', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -39,7 +39,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE).then((c) => c.put('/index.html', copy));
           return res;
         })
-        .catch(() => caches.match('/index.html')),
+        .catch(() => caches.match('/index.html').then((m) => m ?? Response.error())),
     );
     return;
   }
