@@ -3,6 +3,7 @@ import { useApp } from '@/state/AppContext'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { scanFile } from '@/lib/scanner'
 
 export function ScannerView() {
   const { state, actions, videoRef } = useApp()
@@ -61,9 +62,8 @@ export function ScannerView() {
             e.target.value = ''
             if (!file) return
             actions.setStatus('Scanning image…')
-            const { scanner } = await import('@/lib/scannerApi')
             try {
-              const data = await scanner.scanFile(file)
+              const data = await scanFile(file)
               actions.handleDecoded(data, 'file')
             } catch {
               actions.setStatus('No QR code found in that image.')

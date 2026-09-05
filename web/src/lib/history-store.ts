@@ -192,11 +192,6 @@ export async function queryScans({ search = '', type = 'all' }: { search?: strin
   });
 }
 
-export async function getScan(id: number): Promise<ScanRecord | undefined> {
-  const db = await openDB();
-  return promisifyRequest(db.transaction(STORE, 'readonly').objectStore(STORE).get(id));
-}
-
 export async function removeScan(id: number): Promise<void> {
   const db = await openDB();
   const t = db.transaction(STORE, 'readwrite');
@@ -249,29 +244,6 @@ export async function exportScans(): Promise<string> {
     null,
     2,
   );
-}
-
-// ────────────────────────────── CSV export / import ──────────────────────────────
-
-/**
- * CSV of all scans, newest first. Layout matches the JSON export's essential
- * fields so the two files carry the same information (minus per-record `id`).
- * RFC 4180 quoting: double quotes doubled, field wrapped only when needed.
- */
-export async function exportScansCsv(): Promise<string> {
-  const items = await getAllScans();
-  const header = 'content,type,label,scannedAt';
-  const rows = items.map((it) =>
-    [it.content, it.type || 'text', it.label || '', new Date(it.createdAt).toISOString()]
-      .map(csvField)
-      .join(','),
-  );
-  return [header, ...rows].join('\r\n');
-}
-
-function csvField(value: unknown): string {
-  const s = String(value ?? '');
-  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 /**

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useApp } from '@/state/AppContext'
 import { cn } from '@/lib/utils'
-import type { ParsedAction } from '@/lib/app'
+import type { ParsedAction } from '@/lib/types'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 

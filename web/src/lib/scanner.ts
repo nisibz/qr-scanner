@@ -3,10 +3,6 @@
 // (and future phases) doesn't depend on QrScanner internals.
 import QrScanner from '../../vendor/qr-scanner.min.js';
 
-// Set the worker path explicitly so it resolves regardless of where the
-// page is hosted (e.g. Cloudflare Pages subpaths).
-QrScanner.WORKER_PATH = new URL('../../vendor/qr-scanner-worker.min.js', import.meta.url).href;
-
 /**
  * ScannerError carries a stable `name` (e.g. 'NoCamera', 'NotAllowedError',
  * 'InsecureContext') so callers can render friendly messages without parsing
@@ -25,7 +21,6 @@ export interface ScannerHandle {
   stop(): Promise<void>;
   scanFile(file: Blob): Promise<string>;
   destroy(): void;
-  getRaw(): QrScannerLike | null;
   getActiveTrack(): MediaStreamTrack | null;
   getTorchState(): { supported: boolean; on?: boolean };
   setTorch(on: boolean): Promise<boolean>;
@@ -43,7 +38,6 @@ interface QrScannerLike {
 }
 
 interface QrScannerStatic {
-  WORKER_PATH: string;
   new (
     video: HTMLVideoElement,
     onResult: (result: string | { data: string }) => void,
@@ -55,12 +49,13 @@ interface QrScannerStatic {
 }
 const QrScannerCtor = QrScanner as unknown as QrScannerStatic;
 
-export async function hasCamera() {
-  try {
-    return await QrScannerCtor.hasCamera();
-  } catch {
-    return false;
-  }
+/**
+ * Standalone file scan: QrScanner.scanImage works without a camera instance,
+ * so the file picker doesn't need the shared scanner handle.
+ */
+export async function scanFile(file: Blob): Promise<string> {
+  const res = await QrScannerCtor.scanImage(file);
+  return typeof res === 'string' ? res : (res && res.data) || '';
 }
 
 /**
@@ -120,7 +115,7 @@ export function createScanner({ video, onResult }: { video: HTMLVideoElement; on
       if (!window.isSecureContext) {
         throw new ScannerError('InsecureContext', 'Camera needs a secure context (localhost or HTTPS).');
       }
-      if (!(await hasCamera())) {
+      if (!(await QrScannerCtor.hasCamera())) {
         throw new ScannerError('NoCamera', 'No camera found on this device.');
       }
       const s = ensure();
@@ -143,9 +138,6 @@ export function createScanner({ video, onResult }: { video: HTMLVideoElement; on
         scanner = null;
         started = false;
       }
-    },
-    getRaw(): QrScannerLike | null {
-      return scanner;
     },
     getActiveTrack,
 

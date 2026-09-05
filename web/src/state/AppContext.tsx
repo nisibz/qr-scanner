@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { createScanner, type ScannerHandle } from '@/lib/scanner'
 import { parseResult } from '@/lib/result-parser'
-import type { ParsedResult } from '@/lib/app'
+import type { ParsedResult } from '@/lib/types'
 import * as historyStore from '@/lib/history-store'
 import { fetchPageTitle } from '@/lib/page-title'
-import type { HistoryRecord } from '@/lib/app'
+import type { HistoryRecord } from '@/lib/types'
 
 interface AppState {
   status: string

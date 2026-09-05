@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { useApp } from '@/state/AppContext'
-import { dayLabel, clockTime, rowVisuals, type HistoryRecord } from '@/lib/app'
+import { dayLabel, clockTime, rowVisuals } from '@/lib/history-rows'
+import type { HistoryRecord } from '@/lib/types'
 import { parseResult } from '@/lib/result-parser'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -12,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import * as historyStore from '@/lib/history-store'
 import { cn } from '@/lib/utils'
 import { APP_VERSION } from '@/lib/version'
+import { downloadFile } from '@/lib/download'
 
 const FILTERS = [
   { value: 'all', label: 'All' },
@@ -283,7 +285,7 @@ export function HistorySheet({
 
 async function exportJson(history: HistoryRecord[]) {
   const json = JSON.stringify({ exportedAt: new Date().toISOString(), app: 'qr-scanner-pwa', count: history.length, scans: history }, null, 2)
-  download(`qr-history-${new Date().toISOString().slice(0, 10)}.json`, json, 'application/json')
+  downloadFile(`qr-history-${new Date().toISOString().slice(0, 10)}.json`, json, 'application/json')
 }
 
 async function exportCsv(history: HistoryRecord[]) {
@@ -291,7 +293,7 @@ async function exportCsv(history: HistoryRecord[]) {
   const rows = history.map((it) =>
     [it.content, it.type, it.label, it.title ?? '', new Date(it.createdAt).toISOString()].map(csvField).join(','),
   )
-  download(`qr-history-${new Date().toISOString().slice(0, 10)}.csv`, '\uFEFF' + [header, ...rows].join('\r\n'), 'text/csv;charset=utf-8')
+  downloadFile(`qr-history-${new Date().toISOString().slice(0, 10)}.csv`, '\uFEFF' + [header, ...rows].join('\r\n'), 'text/csv;charset=utf-8')
 }
 
 function csvField(value: string) {
@@ -299,14 +301,3 @@ function csvField(value: string) {
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
-function download(filename: string, content: string, mime: string) {
-  const blob = new Blob([content], { type: mime })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(url)
-}
