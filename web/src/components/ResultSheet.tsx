@@ -59,7 +59,11 @@ export function ResultSheet() {
         side="bottom"
         showCloseButton={false}
         aria-label="Scan result"
-        className="inset-x-auto inset-y-auto left-1/2 right-auto -translate-x-1/2 translate-y-0 bottom-[calc(10px+env(safe-area-inset-bottom))] mx-auto w-[calc(100%-20px)] max-w-md max-h-[72dvh] overflow-y-auto rounded-xl border bg-card p-4 gap-3 data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom"
+        // Centering must NOT use translate — the slide-in animation animates
+        // the translate vars and would wipe out -translate-x-1/2 mid-flight
+        // (sheet appeared to fly in from bottom-right). inset-x-0 + mx-auto
+        // keeps it centered through the whole animation.
+        className="inset-x-0 bottom-[calc(10px+env(safe-area-inset-bottom))] mx-auto w-[calc(100%-20px)] max-w-md max-h-[72dvh] overflow-y-auto rounded-xl border bg-card p-4 gap-3"
       >
         <SheetTitle className="sr-only">Scan result</SheetTitle>
         <p className="text-[0.72rem] font-medium uppercase tracking-widest text-muted-foreground">
