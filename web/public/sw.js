@@ -1,9 +1,9 @@
 // Cache-first service worker for the QR Scanner app shell.
 // This is a TEMPLATE: public/sw.js is generated from it at build time
-// (web/scripts/sync-version.mjs replaces 2.2.7 with the version
+// (web/scripts/sync-version.mjs replaces 2.2.8 with the version
 // from package.json — the single source of truth). Never edit public/sw.js.
 
-const CACHE = 'qr-scanner-v2.2.7';
+const CACHE = 'qr-scanner-v2.2.8';
 const ASSETS = [
   '/',
   '/index.html',

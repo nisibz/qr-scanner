@@ -59,11 +59,11 @@ export function ResultSheet() {
         side="bottom"
         showCloseButton={false}
         aria-label="Scan result"
-        // Centering must NOT use translate — the slide-in animation animates
-        // the translate vars and would wipe out -translate-x-1/2 mid-flight
-        // (sheet appeared to fly in from bottom-right). inset-x-0 + mx-auto
-        // keeps it centered through the whole animation.
-        className="inset-x-0 bottom-[calc(10px+env(safe-area-inset-bottom))] mx-auto w-[calc(100%-20px)] max-w-md max-h-[72dvh] overflow-y-auto rounded-xl border bg-card p-4 gap-3"
+        // Floating-card look (margin around, rounded) expressed via the
+        // data-[side=bottom] variant — same pattern as the shadcn docs
+        // (data-[side=bottom]:max-h-[50vh]). No translate-based centering:
+        // slide-in animates the translate vars and would wipe it out.
+        className="data-[side=bottom]:inset-x-3 data-[side=bottom]:bottom-3 data-[side=bottom]:mx-auto data-[side=bottom]:w-auto data-[side=bottom]:max-w-md data-[side=bottom]:max-h-[72dvh] data-[side=bottom]:rounded-xl"
       >
         <SheetTitle className="sr-only">Scan result</SheetTitle>
         <p className="text-[0.72rem] font-medium uppercase tracking-widest text-muted-foreground">
