@@ -27,6 +27,10 @@ interface SwipeState {
   dragging: boolean
 }
 
+// Module-level cache — the manifest never changes mid-session, so fetch it
+// once per app load, not per HistorySheet mount (StrictMode remounts in dev).
+let cachedVersion: string | null = null
+
 export function HistorySheet({
   open, onOpenChange,
 }: {
@@ -44,9 +48,16 @@ export function HistorySheet({
   const startX = useRef<number | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
-  const [version, setVersion] = useState('')
+  const [version, setVersion] = useState(() => cachedVersion ?? '')
   useEffect(() => {
-    fetch('./manifest.webmanifest').then((r) => r.json()).then((m) => setVersion('v' + m.version)).catch(() => {})
+    if (cachedVersion) return
+    fetch('./manifest.webmanifest')
+      .then((r) => r.json())
+      .then((m) => {
+        cachedVersion = 'v' + m.version
+        setVersion(cachedVersion)
+      })
+      .catch(() => {})
   }, [])
 
   // Content → saved page title (URLs fetched at scan time).

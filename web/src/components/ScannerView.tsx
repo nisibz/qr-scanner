@@ -1,17 +1,15 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { useApp } from '@/state/AppContext'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 export function ScannerView() {
   const { state, actions, videoRef } = useApp()
-  const { status, cameraReady, batchMode } = state
+  const { status, cameraReady, batchMode, batch } = state
   const fileInput = useRef<HTMLInputElement>(null)
-  const [batchCount, setBatchCount] = useState(0)
 
-  // Keep batch count in sync for the chip label.
-  const batchLen = useApp().state.batch.length
-  if (batchLen !== batchCount) setBatchCount(batchLen)
+  // batch length is derived state — render it directly, no mirror useState
+  // (per vercel-react-best-practices: rerender-derived-state-no-effect).
 
   return (
     <section className="flex flex-col gap-3.5" aria-label="Scanner">
@@ -44,8 +42,8 @@ export function ScannerView() {
             </span>
           </label>
           {batchMode && (
-            <Button variant="outline" className="rounded-full px-4" disabled={batchLen === 0}>
-              Batch <span className="ml-1 rounded-full bg-accent px-1.5 text-xs font-bold text-white">{batchLen}</span>
+            <Button variant="outline" className="rounded-full px-4" disabled={batch.length === 0}>
+              Batch <span className="ml-1 rounded-full bg-accent px-1.5 text-xs font-bold text-white">{batch.length}</span>
             </Button>
           )}
         </div>
