@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { XIcon } from 'lucide-react'
 import { useApp } from '@/state/AppContext'
 import { cn } from '@/lib/utils'
 import type { ParsedAction } from '@/lib/types'
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetClose, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 
 function ActionButton({ action, onStatus }: { action: ParsedAction; onStatus: (s: string) => void }) {
@@ -63,16 +64,22 @@ export function ResultSheet() {
         // data-[side=bottom] variant — same pattern as the shadcn docs
         // (data-[side=bottom]:max-h-[50vh]). No translate-based centering:
         // slide-in animates the translate vars and would wipe it out.
-        className="data-[side=bottom]:inset-x-3 data-[side=bottom]:bottom-3 data-[side=bottom]:mx-auto data-[side=bottom]:w-auto data-[side=bottom]:max-w-md data-[side=bottom]:max-h-[72dvh] data-[side=bottom]:rounded-xl"
+        className="gap-3 p-4 data-[side=bottom]:inset-x-3 data-[side=bottom]:bottom-3 data-[side=bottom]:mx-auto data-[side=bottom]:w-auto data-[side=bottom]:max-w-md data-[side=bottom]:max-h-[72dvh] data-[side=bottom]:rounded-xl"
       >
         <SheetTitle className="sr-only">Scan result</SheetTitle>
+        <SheetClose
+          className="absolute right-4 top-4 grid size-7 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Close result"
+        >
+          <XIcon className="size-4" />
+        </SheetClose>
         <p className="text-[0.72rem] font-medium uppercase tracking-widest text-muted-foreground">
           {result?.label || 'Decoded'}
         </p>
 
         {result && (
           <>
-            <p className="break-words text-base leading-relaxed">{result.title}</p>
+            <p className="pr-8 break-words text-base leading-relaxed">{result.title}</p>
 
             {result.fields.length > 0 && (
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
@@ -97,10 +104,6 @@ export function ResultSheet() {
                 <ActionButton key={a.label} action={a} onStatus={actions.setStatus} />
               ))}
             </div>
-
-            <Button variant="ghost" className="mt-1 w-full" onClick={() => actions.clearResult()}>
-              Dismiss
-            </Button>
             <span className="sr-only" role="status">{status}</span>
           </>
         )}

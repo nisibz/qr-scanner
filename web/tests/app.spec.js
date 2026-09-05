@@ -27,7 +27,7 @@ test('history opens with seeded rows, day headers and version in menu', async ({
 
   // The last scan leaves its result card open (portal scrim blocks the page)
   // — dismiss it before opening History.
-  await page.getByRole('button', { name: 'Dismiss' }).click();
+  await page.locator('button[aria-label="Close result"]').click();
   await page.waitForTimeout(200);
 
   await page.locator('button[aria-label="Open scan history"]').click();
@@ -69,8 +69,8 @@ test('swipe left reveals Delete; deleting asks for confirmation', async ({ page 
   await page.waitForTimeout(800);
   await seedHistory(page, ['url']);
 
-  // Dismiss the result card left open by the seed scan.
-  await page.getByRole('button', { name: 'Dismiss' }).click();
+  // Close the seed-scan result card first (X button, top-right).
+  await page.locator('button[aria-label="Close result"]').click();
   await page.waitForTimeout(200);
 
   await page.locator('button[aria-label="Open scan history"]').click();
@@ -99,8 +99,8 @@ test('dismissing a result opened from history keeps history open', async ({ page
   await page.waitForTimeout(800);
   await seedHistory(page, ['wifi', 'url']);
 
-  // Dismiss the seed-scan result card first.
-  await page.getByRole('button', { name: 'Dismiss' }).click();
+  // Close the seed-scan result card first (X button, top-right).
+  await page.locator('button[aria-label="Close result"]').click();
   await page.waitForTimeout(200);
 
   await page.locator('button[aria-label="Open scan history"]').click();
@@ -111,8 +111,8 @@ test('dismissing a result opened from history keeps history open', async ({ page
   await row.click({ force: true });
   await expect(page.getByRole('dialog', { name: 'Scan result' })).toBeVisible();
 
-  // Dismissing the card must NOT close the History sheet underneath.
-  await page.getByRole('button', { name: 'Dismiss' }).click();
+  // Closing the card must NOT close the History sheet underneath.
+  await page.locator('button[aria-label="Close result"]').click();
   await expect(page.getByRole('dialog', { name: 'Scan result' })).toBeHidden();
   await expect(page.getByText('Today', { exact: true })).toBeVisible();
 });
