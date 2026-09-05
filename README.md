@@ -1,100 +1,55 @@
 # QR Scanner — PWA
 
-A fast, installable, offline-capable QR code scanner. Live camera scan + scan-from-image-file.
-No build step, plain static HTML/CSS/JS, deployable to Cloudflare Pages.
+A fast, installable, offline-capable QR code scanner. Live camera scan + scan-from-image-file,
+on-device history with meaningful titles for scanned URLs.
 
-<!-- Screenshots: docs/screenshot-scan.png + docs/screenshot-history.png -->
+Built with **Bun + Vite + React + Tailwind + shadcn/ui**, deployed on **Cloudflare Workers**.
 
 ## Features
-- 📷 Live camera scanning (rear camera preferred)
-- 🖼️ Scan a QR from an uploaded image file
-- 🧠 Smart result handling — detects URL / Wi-Fi / vCard / MECARD / email / phone / SMS / location / calendar event / crypto address and offers type-specific actions (open, call, compose, download `.vcf`/`.ics`, copy password…). Suspicious URLs trigger a safety warning.
-- 📱 **Bottom-sheet results** — the decoded card slides up over the camera instead of scrolling the page away, so the code you're aiming at stays in view (docks inline on desktop)
-- 📚 Scan history (IndexedDB, on-device, capped at 500 newest): search, type filter, Export JSON / Export CSV / Import (device-to-device move without a server), per-device privacy toggle
-- 🔦 Camera controls (when the device supports them): torch/flashlight, zoom slider, front/rear camera switch
-- 📥 Batch mode — collect many unique scans into a working list (inventory, check-in) and export it
-- 📋 Copy result / 🔗 open URLs in one tap
-- 📲 Installable PWA, works offline (service worker caches the app shell)
+- 📷 Live camera scanning + 🖼️ scan from an image file
+- 🧠 Smart result handling — URL / Wi-Fi / vCard / event / email / phone / SMS / location / crypto, with type-specific actions (open, call, compose, download `.vcf`/`.ics`, copy). Suspicious URLs trigger a safety warning.
+- 📱 **Bottom-sheet results** — the decoded card slides up over the camera (docks inline on desktop)
+- 📚 On-device history (IndexedDB, capped at 500 newest): titled rows (page `<title>` for URLs via the Worker's `/api/title` — YouTube handled through oEmbed), grouped by day, search + type chips, swipe-to-delete with confirmation
+- 🔁 Export JSON / CSV · Import (merge, deduped) — device-to-device move without a server
+- 📲 Installable PWA, works offline (service worker, cache versioned from `package.json`)
 - 🌗 Dark, mobile-first UI
 
-## Tech
-- [qr-scanner](https://github.com/nimiq/qr-scanner) (vendored in `vendor/`) — lightweight QR engine with high detection rate.
-- Native ES modules — no framework, no bundler.
-- IndexedDB for local history; service worker for offline + PWA installability.
-- Playwright (E2E) + `node:test` (parser unit tests) + Lighthouse CI.
+## Structure
+```
+web/                Vite + React app (source of truth for the version field)
+  src/lib/          Domain logic: scanner wrapper, result parser, history store (TypeScript)
+  src/components/   UI components + shadcn/ui primitives
+  public/           PWA manifest, service worker, icons
+  tests/            Playwright E2E + QR fixtures
+worker/             Cloudflare Worker: serves assets + /api/title endpoint
+wrangler.toml       Workers config (assets = web/dist, main = worker/index.ts)
+```
 
-## Run locally
-
-Camera APIs require a **secure context**. `localhost` counts as secure, so a plain local server works:
-
+## Develop
 ```bash
-npx serve .
-# or:  python3 -m http.server 8000
+cd web
+bun install
+bun run dev          # http://localhost:5173
+bun run build        # type-check + production build to dist/
+bun x playwright test
 ```
 
-Then open the printed URL (e.g. `http://localhost:3000`) and grant camera permission.
+Camera requires a secure context — `localhost` counts.
 
-> Opening `index.html` directly via `file://` will **not** work — camera access is blocked on `file://`.
+## Deploy (Cloudflare Workers, Git integration)
+- **Build command:** `cd web && bun install && bun run build`
+- **Deploy command:** `npx wrangler deploy`
 
-## Deploy to Cloudflare Pages
+## Versioning
+`web/package.json` `version` is the single source of truth. On every build,
+`web/scripts/sync-version.mjs` stamps it into `public/sw.js` (cache name) and
+`public/manifest.webmanifest` — never bump those by hand.
 
-**Automatic (recommended):** every push to `main` deploys via GitHub Actions
-(`.github/workflows/deploy.yml`). One-time setup: add a repository secret
-`CLOUDFLARE_API_TOKEN` with the *"Cloudflare Pages — Edit"* permission
-([create token](https://dash.cloudflare.com/profile/api-tokens) → repo *Settings → Secrets and variables → Actions*).
-
-**Manual:** log in with `npx wrangler login` (or set `CLOUDFLARE_API_TOKEN`), then from the project root:
-
-```bash
-npx wrangler pages deploy .
-```
-
-**Git integration (CI deploys):** connect this repo in the Cloudflare dashboard → Workers & Pages → *Create* → *Pages* → *Connect to Git*. This is a **pure static site with no build step**, so set:
-- **Framework preset:** *None*
-- **Build command:** *(leave empty)*
-- **Build output directory:** `/` (the repo root — all static files live here)
-- **Root directory:** `/`
-
-Do **not** put `npx wrangler deploy` as the build command — Cloudflare Pages uploads the output directory automatically; a manual deploy command conflicts with that and fails. Pushing to your production branch then redeploys on every commit.
-
-## Project layout
-```
-index.html                 App shell
-css/style.css              Dark, mobile-first styles
-js/app.js                  Orchestrator: UI state, events, wiring
-js/lib/scanner.js          Wrapper around the vendored QrScanner + device controls
-js/lib/result-parser.js    QR content type detection + action model
-js/lib/history-store.js    IndexedDB-backed local history
-manifest.webmanifest       PWA manifest
-sw.js                      Service worker (cache-first app shell)
-vendor/                    Vendored qr-scanner library + worker
-icons/                     192/512 PWA icons (+ source.svg)
-wrangler.toml              Cloudflare Pages config
-playwright.config.js       E2E test config
-tests/e2e/                 Playwright browser tests
-tests/unit/                node:test parser unit tests
-tests/fixtures/            QR image fixtures + generator
-lighthouserc.json          Lighthouse CI config
-```
-
-## Develop / test
-
-The app itself has **no build step** — it's plain static files served as-is.
-Node dev tooling (Playwright, Lighthouse CI) is for testing only.
-
-```bash
-npm install                 # one-time: fetch dev tooling
-npm run serve               # serve app at http://localhost:5173
-npm run test:unit           # parser unit tests (node:test)
-npm test                    # Playwright E2E tests
-npm run test:fixtures       # regenerate QR image fixtures
-npm run lighthouse          # Lighthouse CI against local server
-```
-
-CI runs both unit + E2E and Lighthouse on every push/PR (`.github/workflows/ci.yml`).
+SemVer: UI/bugfix changes → PATCH, features → MINOR, breaking → MAJOR.
 
 ## Notes
-- The `qr-scanner` worker is loaded relative to `scanner.js` via `QrScanner.WORKER_PATH`, so the app stays self-contained and offline-capable.
-- History lives in IndexedDB on the device; nothing leaves the browser. A toggle in the History view controls whether new scans are saved.
-- Camera controls (torch / zoom / switch) only appear when the active stream advertises the capability — they degrade gracefully on unsupported hardware.
-- To update the scanner, replace the two files in `vendor/`, bump the cache version in `sw.js` (`qr-scanner-v5`), and regenerate test fixtures.
+- History lives in IndexedDB on the device; nothing leaves the browser except
+  scanned http(s) URLs, which are fetched server-side by `/api/title` to read
+  the page title (private/loopback hosts are rejected).
+- The `qr-scanner` worker is bundled from `web/vendor/`; replace the two files
+  there to update the scanner engine.

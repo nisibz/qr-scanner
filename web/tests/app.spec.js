@@ -1,9 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { resolve } from 'node:path';
 
-// E2E for the React rewrite. Fixtures are generated QR images from the
-// repo-level tests/fixtures (generate via `npm run test:fixtures` there).
-const fixture = (name) => resolve(process.cwd(), '../tests/fixtures', `${name}.png`);
+// E2E for the React rewrite. Fixtures are QR images checked into the repo.
+const fixture = (name) => resolve(process.cwd(), 'tests/fixtures', `${name}.png`);
 
 async function seedHistory(page, fixtures) {
   // Seed through the app itself (file scans) — direct IDB writes are blocked
