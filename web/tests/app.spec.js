@@ -93,3 +93,26 @@ test('swipe left reveals Delete; deleting asks for confirmation', async ({ page 
   await page.waitForTimeout(500);
   await expect(page.locator('li .relative.z-10')).toHaveCount(0);
 });
+
+test('dismissing a result opened from history keeps history open', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForTimeout(800);
+  await seedHistory(page, ['wifi', 'url']);
+
+  // Dismiss the seed-scan result card first.
+  await page.getByRole('button', { name: 'Dismiss' }).click();
+  await page.waitForTimeout(200);
+
+  await page.locator('button[aria-label="Open scan history"]').click();
+
+  // Open a result from a row — the portal must layer on top of History.
+  const row = page.locator('.truncate', { hasText: 'MyNetwork' });
+  await row.scrollIntoViewIfNeeded();
+  await row.click({ force: true });
+  await expect(page.getByRole('dialog', { name: 'Scan result' })).toBeVisible();
+
+  // Dismissing the card must NOT close the History sheet underneath.
+  await page.getByRole('button', { name: 'Dismiss' }).click();
+  await expect(page.getByRole('dialog', { name: 'Scan result' })).toBeHidden();
+  await expect(page.getByText('Today', { exact: true })).toBeVisible();
+});

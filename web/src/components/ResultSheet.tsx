@@ -51,8 +51,19 @@ export function ResultSheet() {
     // Radix's modal Dialog sets body pointer-events:none and re-enables only
     // inside its own Content subtree — our portal lives outside that, so it
     // must re-enable pointer events on its own root.
+    //
+    // stopPropagation on the root: Radix's History Sheet dismisses itself on
+    // "outside" pointer events. Without this, tapping anywhere in the result
+    // card (including Dismiss) closes the History underneath too.
     createPortal(
-      <div className="fixed inset-0 z-[60]" style={{ pointerEvents: 'auto' }}>
+      <div
+        className="fixed inset-0 z-[60]"
+        style={{ pointerEvents: 'auto' }}
+        onPointerDown={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
         <div
           aria-hidden="true"
           className="absolute inset-0 bg-black/40 animate-in fade-in duration-200"
