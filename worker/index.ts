@@ -51,6 +51,40 @@ async function handleTitle(request: Request, url: URL): Promise<Response> {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TITLE_TIMEOUT_MS);
+
+    // YouTube pages block Cloudflare IPs (HTML fetch fails), but their public
+    // oEmbed API works and returns the real video title. Handle watch/
+    // shorts/youtu.be links through it first; fall through for everything else.
+    const isYt =
+      parsed.hostname === 'youtu.be' || /\.youtube\.com$/i.test(parsed.hostname);
+    if (isYt) {
+      const ytId =
+        parsed.hostname === 'youtu.be'
+          ? parsed.pathname.slice(1).match(/^([\w-]{11})/)?.[1]
+          : (parsed.searchParams.get('v') ??
+             parsed.pathname.match(/\/(?:shorts|embed|live)\/([\w-]{11})/)?.[1]);
+      if (ytId) {
+        try {
+          const oembed = await fetch(
+            `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${ytId}`)}&format=json`,
+            { signal: controller.signal },
+          );
+          if (oembed.ok) {
+            const data = (await oembed.json().catch(() => null)) as { title?: string } | null;
+            if (data?.title) {
+              clearTimeout(timer);
+              return Response.json(
+                { title: data.title },
+                { headers: { 'cache-control': 'public, max-age=86400' } },
+              );
+            }
+          }
+        } catch {
+          /* oEmbed failed — fall through to HTML fetch as a last resort */
+        }
+      }
+    }
+
     const res = await fetch(parsed.href, {
       signal: controller.signal,
       redirect: 'follow',
@@ -86,19 +120,6 @@ async function handleTitle(request: Request, url: URL): Promise<Response> {
       text.match(/<meta[^>]+content=["']([^"']{1,300})["'][^>]+property=["']og:title["']/i)?.[1] ??
       '';
     title = title.replace(/\s+/g, ' ').trim();
-
-    // YouTube watch URLs: the HTML <title> is just "YouTube" (SPA shell).
-    // Their public oEmbed API returns the real video title.
-    const yt = parsed.hostname.match(/(^|\.)youtube\.com$/i) || parsed.hostname === 'youtu.be';
-    if (yt && /\/(watch|shorts)\//.test(parsed.pathname) && (!title || /^youtube$/i.test(title))) {
-      const oembed = await fetch(
-        `https://www.youtube.com/oembed?url=${encodeURIComponent(parsed.href)}&format=json`,
-      ).catch((e) => { console.log('[title] oembed fetch error:', String(e)); return null; });
-      if (oembed && oembed.ok) {
-        const data = (await oembed.json().catch(() => null)) as { title?: string } | null;
-        if (data?.title) title = data.title;
-      }
-    }
 
     if (!title) {
       return Response.json({ error: 'no title' }, { status: 404 });
