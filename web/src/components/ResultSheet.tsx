@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useApp } from '@/state/AppContext'
 import { cn } from '@/lib/utils'
 import type { ParsedAction } from '@/lib/app'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 
 function ActionButton({ action, onStatus }: { action: ParsedAction; onStatus: (s: string) => void }) {
@@ -40,75 +40,67 @@ function ActionButton({ action, onStatus }: { action: ParsedAction; onStatus: (s
   )
 }
 
+/**
+ * Bottom sheet showing one decoded QR result.
+ *
+ * A second Radix Dialog, NOT a manual portal: Radix's DismissableLayer
+ * stacks nested layers correctly (inner dismisses first, outer stays),
+ * which is exactly the relationship between this sheet and the History
+ * sheet. All the z-index / stopPropagation / pointer-events patching the
+ * manual approach needed disappears — the primitives handle it.
+ */
 export function ResultSheet() {
   const { state, actions } = useApp()
   const { result, status } = state
-  if (!result) return null
 
   return (
-    // Portal above everything (Sheet is z-50): the card owns its own scrim so
-    // taps land here, never leak through to the History footer underneath.
-    // Radix's modal Dialog sets body pointer-events:none and re-enables only
-    // inside its own Content subtree — our portal lives outside that, so it
-    // must re-enable pointer events on its own root.
-    //
-    // stopPropagation on the root: Radix's History Sheet dismisses itself on
-    // "outside" pointer events. Without this, tapping anywhere in the result
-    // card (including Dismiss) closes the History underneath too.
-    createPortal(
-      <div
-        className="fixed inset-0 z-[60]"
-        style={{ pointerEvents: 'auto' }}
-        onPointerDown={(e) => e.stopPropagation()}
-        onPointerUp={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
+    <Sheet open={result != null} onOpenChange={(open) => { if (!open) actions.clearResult() }}>
+      <SheetContent
+        side="bottom"
+        showCloseButton={false}
+        aria-label="Scan result"
+        className="mx-auto w-[calc(100%-20px)] max-w-md max-h-[72dvh] overflow-y-auto rounded-xl border bg-card p-4 gap-3 bottom-[calc(10px+env(safe-area-inset-bottom))] top-auto left-1/2 right-auto -translate-x-1/2 translate-y-0 data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom"
       >
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-black/40 animate-in fade-in duration-200"
-          onClick={() => actions.clearResult()}
-        />
-        <div
-          role="dialog"
-          aria-label="Scan result"
-          className="absolute inset-x-0 mx-auto w-[calc(100%-20px)] max-w-md max-h-[72dvh] overflow-y-auto rounded-xl border bg-card p-4 shadow-[0_-8px_32px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-4 fade-in duration-200"
-          style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))' }}
-        >
-      <p className="text-[0.72rem] uppercase tracking-widest text-muted-foreground">{result.label || 'Decoded'}</p>
-      <p className="mt-1 break-words text-base leading-relaxed">{result.title}</p>
+        <SheetTitle className="sr-only">Scan result</SheetTitle>
+        <p className="text-[0.72rem] font-medium uppercase tracking-widest text-muted-foreground">
+          {result?.label || 'Decoded'}
+        </p>
 
-      {result.fields.length > 0 && (
-        <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
-          {result.fields.map((f: { label: string; value: string; monospace?: boolean }) => (
-            <div key={f.label} className="contents">
-              <dt className="font-medium text-muted-foreground">{f.label}</dt>
-              <dd className={cn('break-words', f.monospace && 'font-mono text-[0.9em]')}>{f.value}</dd>
+        {result && (
+          <>
+            <p className="break-words text-base leading-relaxed">{result.title}</p>
+
+            {result.fields.length > 0 && (
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+                {result.fields.map((f) => (
+                  <div key={f.label} className="contents">
+                    <dt className="font-medium text-muted-foreground">{f.label}</dt>
+                    <dd className={cn('break-words', f.monospace && 'font-mono text-[0.9em]')}>{f.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+
+            {result.safety && !result.safety.isSafe && (
+              <div className="rounded-lg border border-orange-500/40 bg-orange-500/10 p-3 text-sm text-orange-200">
+                <strong>Heads up — </strong>
+                {result.safety.reasons.join('; ')}.
+              </div>
+            )}
+
+            <div className="mt-2 flex flex-wrap gap-2.5">
+              {result.actions.map((a) => (
+                <ActionButton key={a.label} action={a} onStatus={actions.setStatus} />
+              ))}
             </div>
-          ))}
-        </dl>
-      )}
 
-      {result.safety && !result.safety.isSafe && (
-        <div className="mt-3 rounded-lg border border-orange-500/40 bg-orange-500/10 p-3 text-sm text-orange-200">
-          <strong>Heads up — </strong>
-          {result.safety.reasons.join('; ')}.
-        </div>
-      )}
-
-      <div className="mt-4 flex flex-wrap gap-2.5">
-        {result.actions.map((a: ParsedAction) => (
-          <ActionButton key={a.label} action={a} onStatus={actions.setStatus} />
-        ))}
-      </div>
-
-      <Button variant="ghost" className="mt-2 w-full" onClick={() => actions.clearResult()}>
-        Dismiss
-      </Button>
-      <span className="sr-only" role="status">{status}</span>
-        </div>
-      </div>,
-      document.body,
-    )
+            <Button variant="ghost" className="mt-1 w-full" onClick={() => actions.clearResult()}>
+              Dismiss
+            </Button>
+            <span className="sr-only" role="status">{status}</span>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
   )
 }
