@@ -1,7 +1,10 @@
 name = "qr-scanner"
 compatibility_date = "2026-09-01"
+main = "worker/index.ts"
 
-# Built static assets from the Vite app.
-# Deploy: cd web && bun run build && npx wrangler deploy
+# Serve the built SPA from [assets] and expose /api/title from the Worker
+# script (see worker/index.ts). Deploy: bun run build (in web/) then
+# `npx wrangler deploy` from the repo root.
 [assets]
 directory = "./web/dist"
+binding = "ASSETS"
