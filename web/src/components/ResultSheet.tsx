@@ -59,7 +59,7 @@ export function ResultSheet() {
         side="bottom"
         showCloseButton={false}
         aria-label="Scan result"
-        className="mx-auto w-[calc(100%-20px)] max-w-md max-h-[72dvh] overflow-y-auto rounded-xl border bg-card p-4 gap-3 bottom-[calc(10px+env(safe-area-inset-bottom))] top-auto left-1/2 right-auto -translate-x-1/2 translate-y-0 data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom"
+        className="inset-x-auto inset-y-auto left-1/2 right-auto -translate-x-1/2 translate-y-0 bottom-[calc(10px+env(safe-area-inset-bottom))] mx-auto w-[calc(100%-20px)] max-w-md max-h-[72dvh] overflow-y-auto rounded-xl border bg-card p-4 gap-3 data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom"
       >
         <SheetTitle className="sr-only">Scan result</SheetTitle>
         <p className="text-[0.72rem] font-medium uppercase tracking-widest text-muted-foreground">
@@ -82,7 +82,7 @@ export function ResultSheet() {
             )}
 
             {result.safety && !result.safety.isSafe && (
-              <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning-foreground">
+              <div className="rounded-lg border border-warning bg-warning text-warning-foreground p-3 text-sm font-medium">
                 <strong>Heads up — </strong>
                 {result.safety.reasons.join('; ')}.
               </div>
