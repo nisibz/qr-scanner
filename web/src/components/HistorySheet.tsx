@@ -6,6 +6,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Switch } from '@/components/ui/switch'
+import { Separator } from '@/components/ui/separator'
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { Button } from '@/components/ui/button'
 import * as historyStore from '@/lib/history-store'
 import { cn } from '@/lib/utils'
@@ -100,7 +102,7 @@ export function HistorySheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" showCloseButton={false} className="inset-0 h-full max-w-lg mx-auto rounded-none border-0 p-0 flex flex-col bg-background sm:max-w-lg sm:rounded-none">
-        <SheetHeader className="flex-row items-center justify-between space-y-0 px-5 pt-5 pb-2">
+        <SheetHeader className="flex-row items-center justify-between px-5 pt-5 pb-2">
           <SheetTitle className="text-xl">History</SheetTitle>
           <div className="flex items-center gap-2">
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
@@ -121,11 +123,11 @@ export function HistorySheet({
                     }}
                   />
                 </div>
-                <div className="mx-2 my-1 border-t" />
+                <Separator className="mx-2 my-1" />
                 <DropdownMenuItem onClick={() => void exportJson(history)}>↓ Export JSON</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => void exportCsv(history)}>↓ Export CSV</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { setMenuOpen(false); fileInput.current?.click() }}>↑ Import from file…</DropdownMenuItem>
-                <div className="mx-2 my-1 border-t" />
+                <Separator className="mx-2 my-1" />
                 <div className="flex items-center justify-between px-2 py-1.5 text-sm text-muted-foreground">
                   <span>Version</span>
                   <span className="tabular-nums" data-testid="version">{version}</span>
@@ -170,7 +172,16 @@ export function HistorySheet({
 
         <ul className="flex-1 overflow-y-auto px-2 pb-2">
           {groups.length === 0 && (
-            <li className="p-10 text-center text-sm text-muted-foreground">No matching scans.</li>
+            <li>
+              <Empty className="p-10">
+                <EmptyHeader>
+                  <EmptyTitle>No matching scans</EmptyTitle>
+                  <EmptyDescription>
+                    Scanned QR codes will appear here.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            </li>
           )}
           {groups.map((g) => (
             <li key={g.day}>

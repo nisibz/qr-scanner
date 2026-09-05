@@ -20,7 +20,7 @@ function ActionButton({ action, onStatus }: { action: ParsedAction; onStatus: (s
     <Button
       type="button"
       variant={action.primary ? 'default' : 'ghost'}
-      className={cn('flex-1 min-w-24', copied === true && 'bg-green-500/15 border-green-500 text-green-500', copied === false && 'border-destructive text-destructive')}
+      className={cn('flex-1 min-w-24', copied === true && 'border-success bg-success/15 text-success', copied === false && 'border-destructive text-destructive')}
       onClick={async () => {
         let ok = false
         try {
@@ -82,7 +82,7 @@ export function ResultSheet() {
             )}
 
             {result.safety && !result.safety.isSafe && (
-              <div className="rounded-lg border border-orange-500/40 bg-orange-500/10 p-3 text-sm text-orange-200">
+              <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning-foreground">
                 <strong>Heads up — </strong>
                 {result.safety.reasons.join('; ')}.
               </div>

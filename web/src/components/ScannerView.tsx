@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { useApp } from '@/state/AppContext'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
 export function ScannerView() {
@@ -43,7 +44,7 @@ export function ScannerView() {
           </label>
           {batchMode && (
             <Button variant="outline" className="rounded-full px-4" disabled={batch.length === 0}>
-              Batch <span className="ml-1 rounded-full bg-accent px-1.5 text-xs font-bold text-white">{batch.length}</span>
+              Batch <Badge className="rounded-full px-1.5">{batch.length}</Badge>
             </Button>
           )}
         </div>
